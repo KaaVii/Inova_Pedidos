@@ -1,3 +1,7 @@
+from PyQt5 import QtCore
+import pandas as pd
+
+
 class DataFrameModel(QtCore.QAbstractTableModel):
     DtypeRole = QtCore.Qt.UserRole + 1000
     ValueRole = QtCore.Qt.UserRole + 1001

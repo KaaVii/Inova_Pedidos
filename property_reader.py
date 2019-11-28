@@ -1,7 +1,11 @@
 #!/usr/bin/python
-import ConfigParser
+import configparser
 
-config = ConfigParser.RawConfigParser()
-config.read('ConfigFile.properties')
+config = configparser.RawConfigParser()
+config.read('config.properties')
 
-print(config.get('DatabaseSection', 'database.dbname'))
+#print(config.get('DatabaseSe ction', 'database.dbname'))
+
+def getConfig(section, option):
+    result = config.get(section,option)
+    return result
