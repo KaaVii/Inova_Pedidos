@@ -110,6 +110,22 @@ class InoveApp(QDialog):
         radioButton3 = QRadioButton("Radio button 3")
         radioButton1.setChecked(True)
 
+
+        '''SUBMIT BUTTON CONFIG'''
+        submit_btn = QPushButton()
+        #Ainda falta conectar o submit
+        #submit_btn.clicked.connect()
+        submit_btn.setText('Prosseguir com o Scan')
+        submit_btn.setStyleSheet('QPushButton { font-weight: bold; color: green;}')
+
+        '''CLEAR BUTTON CONFIG '''
+        clear_btn = QPushButton()
+        clear_btn.setText('Cancelar Operação')
+        clear_btn.setStyleSheet('QPushButton { font-weight: bold; color: red;}')
+        clear_btn.clicked.connect(pedido.clear)
+        clear_btn.clicked.connect(n_simafic.clear)
+        clear_btn.clicked.connect(qtd_items.clear)
+
         checkBox = QCheckBox("Tri-state check box")
         checkBox.setTristate(True)
         checkBox.setCheckState(Qt.PartiallyChecked)
@@ -120,6 +136,10 @@ class InoveApp(QDialog):
         layout.addWidget(qtd_items)
         layout.addWidget(checkBox)
         layout.addStretch(1)
+        layout.addWidget(submit_btn)
+        layout.addStretch(1)
+        layout.addWidget(clear_btn)
+        layout.addStretch(2)
         self.topLeftGroupBox.setLayout(layout)
 
     def createTopRightGroupBox(self):
@@ -199,6 +219,8 @@ class InoveApp(QDialog):
         timer = QTimer(self)
         timer.timeout.connect(self.advanceProgressBar)
         timer.start(1000)
+
+   
 
 
 if __name__ == '__main__':
