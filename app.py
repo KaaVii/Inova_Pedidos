@@ -1,23 +1,24 @@
 import fix_qt_import_error
-from services import get_simafic_as_dataframe, get_main_icon
+from services import get_simafic_as_dataframe, get_main_icon, get_h_size, get_v_size, get_all_pedidos
 from PyQt5.QtCore import QDateTime, Qt, QTimer, QSize
 from PyQt5 import QtGui
 from PyQt5.QtWidgets import (QApplication, QCheckBox, QComboBox, QDateTimeEdit,
                              QDial, QDialog, QGridLayout, QGroupBox, QHBoxLayout, QLabel, QLineEdit,
                              QProgressBar, QPushButton, QRadioButton, QScrollBar, QSizePolicy,
                              QSlider, QSpinBox, QStyleFactory, QTableWidget, QTabWidget, QTextEdit,
-                             QVBoxLayout, QWidget, QErrorMessage, QTableView)
+                             QVBoxLayout, QWidget, QErrorMessage, QTableView, QSpacerItem)
 
 
 main_icon = str(get_main_icon())
-
+h_size=int(get_h_size())
+v_size=int(get_v_size())
 
 class InoveApp(QDialog):
 
     def __init__(self, parent=None):
         super(InoveApp, self).__init__(parent)
 
-        self.setMinimumSize(QSize(960, 640))
+        self.setMinimumSize(QSize(h_size, v_size))
         self.originalPalette = QApplication.palette()
         self.setWindowIcon(QtGui.QIcon(main_icon))
         self.setWindowTitle("Inove")
@@ -111,16 +112,20 @@ class InoveApp(QDialog):
         radioButton1.setChecked(True)
 
 
-        '''SUBMIT BUTTON CONFIG'''
-        submit_btn = QPushButton()
+        '''ADD PEDIDO'''
+        add_pedido = QPushButton('Adicionar Item', self)
         #Ainda falta conectar o submit
         #submit_btn.clicked.connect()
-        submit_btn.setText('Prosseguir com o Scan')
+        add_pedido.setStyleSheet('QPushButton { font-weight: bold; color: blue;}')
+
+        '''SUBMIT BUTTON CONFIG'''
+        submit_btn = QPushButton('Prosseguir com o Scan', self)
+        #Ainda falta conectar o submit
+        #submit_btn.clicked.connect()
         submit_btn.setStyleSheet('QPushButton { font-weight: bold; color: green;}')
 
         '''CLEAR BUTTON CONFIG '''
-        clear_btn = QPushButton()
-        clear_btn.setText('Cancelar Operação')
+        clear_btn = QPushButton('Limpar Campos', self)
         clear_btn.setStyleSheet('QPushButton { font-weight: bold; color: red;}')
         clear_btn.clicked.connect(pedido.clear)
         clear_btn.clicked.connect(n_simafic.clear)
@@ -136,6 +141,8 @@ class InoveApp(QDialog):
         layout.addWidget(qtd_items)
         layout.addWidget(checkBox)
         layout.addStretch(1)
+        layout.addWidget(add_pedido)
+        layout.addStretch(1)
         layout.addWidget(submit_btn)
         layout.addStretch(1)
         layout.addWidget(clear_btn)
@@ -146,7 +153,36 @@ class InoveApp(QDialog):
         self.topRightGroupBox = QTabWidget()
         self.topRightGroupBox.setSizePolicy(QSizePolicy.Preferred,
                                             QSizePolicy.Ignored)
+                                            
 
+
+         #[First Tab] Create first tab
+        verticalSpacer = QSpacerItem(40, 20, QSizePolicy.Minimum, QSizePolicy.Expanding)
+        tab1ListaItens = QWidget()
+        layout = QVBoxLayout(self)
+
+        #[First Tab] - Search Input
+        searchPedido = QLineEdit(self)
+        searchPedido.setPlaceholderText("Filtrar pedido: ")
+        searchPedido.textChanged.connect(lambda: self.filterDbItens(searchPedido.text()))
+
+        #[First Tab] - Set TableView
+        table2Widget = QTableView()
+        tab2hbox = QHBoxLayout()
+        modelAllPedidos = get_all_pedidos()
+        table2Widget.setModel(modelAllPedidos)
+        #tab2hbox.setContentsMargins(5, 5, 5, 5)
+        tab2hbox.addWidget(table2Widget)
+        
+        #[First Tab] - Set Layout
+        layout.addWidget(searchPedido)
+        layout.addWidget(table2Widget)
+        layout.addItem(verticalSpacer)
+        tab1ListaItens.setLayout(layout)
+
+
+        #TODO
+      
         tabItensValidos = QWidget()
         tableItensValidos = QTableView()
         #tableItensValidos.horizontalHeader().sectionClicked.connect(your_callable)
@@ -161,20 +197,70 @@ class InoveApp(QDialog):
 
         tabItensValidos.setLayout(tab1hbox)
 
-        tab2 = QWidget()
-        table2Widget = QTableWidget(10, 10)
 
-        tab2hbox = QHBoxLayout()
-        tab2hbox.setContentsMargins(5, 5, 5, 5)
-        tab2hbox.addWidget(table2Widget)
-        tab2.setLayout(tab2hbox)
-        
-        self.topRightGroupBox.addTab(tab2, "&Lista de Itens:")
-        self.topRightGroupBox.addTab(tabItensValidos, "Itens Validos:")
+
+      
+        self.topRightGroupBox.addTab(tab1ListaItens, "&Lista de Pedidos: ")
+        self.topRightGroupBox.addTab(tabItensValidos, "Itens de Itens:")
 
     def createBottomLeftGroupBox(self):
         self.bottomLeftGroupBox = QGroupBox("Resumo")
-        layout = QVBoxLayout()
+        
+        output_pedido = QLineEdit()
+        output_pedido.setReadOnly(True)
+        output_pedido.setText('12345')
+        output_pedido.setDisabled(True)
+
+        output_produto = QLineEdit()
+        output_produto.setReadOnly(True)
+        output_produto.setText('12345')
+        output_produto.setDisabled(True)
+
+        output_desc = QLineEdit()
+        output_desc.setReadOnly(True)
+        output_desc.setText('12345')
+        output_desc.setDisabled(True)
+
+        output_qtd_scanneada = QLineEdit()
+        output_qtd_scanneada.setReadOnly(True)
+        output_qtd_scanneada.setText('12345')
+        output_qtd_scanneada.setDisabled(True)
+
+        output_qtd_total = QLineEdit()
+        output_qtd_total.setReadOnly(True)
+        output_qtd_total.setText('12345')
+        output_qtd_total.setDisabled(True)
+
+        id_pedido_label = QLabel("&Numero do Pedido: ")
+        id_pedido_label.setBuddy(output_pedido)
+        id_produto_label =QLabel("&Produto: ")
+        id_produto_label.setBuddy(output_pedido)
+        desc_label = QLabel("&Desc: ")
+        desc_label.setBuddy(output_desc)
+        qty_scanneada = QLabel("&Qtd Scanneada.: ")
+        qty_scanneada.setBuddy(output_qtd_scanneada)
+        qty_total = QLabel("&Qtd Total: ")
+        qty_total.setBuddy(output_qtd_total)
+
+        layout = QGridLayout()
+        
+        verticalSpacer = QSpacerItem(40, 20, QSizePolicy.Minimum, QSizePolicy.Expanding)
+
+
+        layout.addWidget(id_pedido_label, 0, 0)
+        layout.addWidget(output_pedido, 1, 0)
+        layout.addWidget(id_produto_label, 0, 1)
+        layout.addWidget(output_produto, 1, 1)
+        layout.addWidget(desc_label, 2,0)
+        layout.addWidget(output_desc, 3,0)
+        layout.addWidget(qty_scanneada, 2, 1)
+        layout.addWidget(output_qtd_scanneada, 3, 1)
+        layout.addWidget(qty_total, 2, 2)
+        layout.addWidget(output_qtd_total, 3, 2)
+        layout.addItem(verticalSpacer, 6, 0, Qt.AlignTop)
+        
+
+
         self.bottomLeftGroupBox.setLayout(layout)
 
     def createBottomRightGroupBox(self):
@@ -220,14 +306,12 @@ class InoveApp(QDialog):
         timer.timeout.connect(self.advanceProgressBar)
         timer.start(1000)
 
-   
-
-
 if __name__ == '__main__':
 
     import sys
 
     app = QApplication(sys.argv)
     gallery = InoveApp()
-    gallery.showMaximized()
+    gallery.show()
+    #gallery.showMaximized()
     sys.exit(app.exec_())

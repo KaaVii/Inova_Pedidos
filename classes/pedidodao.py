@@ -58,6 +58,9 @@ class Pedido(Base):
             id=id(self) & 0xFFFFFF,
             attrs=" ".join("{}={!r}".format(k, v) for k, v in self.__dict__.items()),
             )
+            
+    '''def asdict(self):
+        return {'a': self.a, 'b': self.b, 'c': self.c}'''
 
 if __name__ == "__main__":
     # Removendo todas as tabelas do banco.
@@ -128,5 +131,13 @@ else :
     def queryAllPedidos():
         session = Session()
         dados = session.query(Pedido).all()
+        session.close()
+        return dados
+
+    def dinamicQuery(id_pedido):
+        session = Session()
+        print (str(id_pedido))
+        dados = session.query(Pedido).filter_by(id_pedido = id_pedido).all()
+
         session.close()
         return dados

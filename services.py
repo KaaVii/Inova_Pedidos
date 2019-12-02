@@ -28,7 +28,7 @@ def validaItem(produto):
     for val in roupa_dict:
         print (val.get(0))
         if (produto == val.get(0)):
-            print("O SEU PRODUTO EXISTE! PARABÉNS: {}".format(val.get(0)))
+            print("Produto encontrado: ".format(val.get(0)))
             print(val.get(1))
             return val
 
@@ -61,8 +61,22 @@ def loadValidXLS():
     resultdf.reindex(index=range(1,len(resultList)))
     return pd.DataFrame.from_dict(resultList)
 
+def get_all_pedidos():
+    arr = pdao.queryAllPedidos()
+    print(arr)
+    variables = pdao.Pedido.__dict__.keys()
+    print (variables)
+    df = pd.DataFrame([[getattr(i,j) for j in variables] for i in arr], columns = variables)
+    return PandasModel(df)
+
 def get_main_icon():
     return getConfig('inova', 'icon')
+
+def get_h_size():
+    return getConfig('inova', 'h_size')
+
+def get_v_size():
+    return getConfig('inova', 'v_size')
 
 if __name__ == "__main__":
     df = pd.read_excel('plan_test.xlsx', index_col=None, header=0)
