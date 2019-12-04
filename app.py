@@ -1,6 +1,6 @@
 import fix_qt_import_error
 from services import get_simafic_as_dataframe, get_main_icon, get_h_size, get_v_size, get_all_pedidos
-from PyQt5.QtCore import QDateTime, Qt, QTimer, QSize
+from PyQt5.QtCore import QDateTime, Qt, QTimer, QSize, QSortFilterProxyModel
 from PyQt5 import QtGui
 from PyQt5.QtWidgets import (QApplication, QCheckBox, QComboBox, QDateTimeEdit,
                              QDial, QDialog, QGridLayout, QGroupBox, QHBoxLayout, QLabel, QLineEdit,
@@ -164,15 +164,24 @@ class InoveApp(QDialog):
         #[First Tab] - Search Input
         searchPedido = QLineEdit(self)
         searchPedido.setPlaceholderText("Filtrar pedido: ")
-        searchPedido.textChanged.connect(lambda: self.filterDbItens(searchPedido.text()))
 
         #[First Tab] - Set TableView
+        
+
         table2Widget = QTableView()
         tab2hbox = QHBoxLayout()
         modelAllPedidos = get_all_pedidos()
-        table2Widget.setModel(modelAllPedidos)
+
+        proxyFilter = QSortFilterProxyModel()
+        proxyFilter.setSourceModel(modelAllPedidos)
+        proxyFilter.setFilterKeyColumn(5)
+        proxyFilter.setSortCaseSensitivity(Qt.CaseSensitive)
         #tab2hbox.setContentsMargins(5, 5, 5, 5)
         tab2hbox.addWidget(table2Widget)
+
+        searchPedido.textChanged.connect(lambda wildcard: proxyFilter.setFilterWildcard(wildcard))
+        table2Widget.setModel(proxyFilter)
+
         
         #[First Tab] - Set Layout
         layout.addWidget(searchPedido)

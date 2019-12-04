@@ -12,12 +12,12 @@ from property_reader import getConfig
 def comparator():
 
     pedido = '123'
-    produto = '08.04.02.507-6'
+    produto = '08.04.02.499-9'
     npedido = 10
     
     result = validaItem(produto)
 
-    pedido = pdao.Pedido(id_pedido=pedido, id_product=result.get(0), desc=result.get(1), qty_total=int(npedido), qty_scanneada=0)
+    pedido = pdao.Pedido(id_pedido=pedido, id_product=result.get('CODIGO'), desc=result.get('DESCRICAO'), qty_total=int(npedido), qty_scanneada=0)
     pdao.inserirPedido(pedido)
     pedidoselecionado = pdao.queryAllPedidos()
     print (pedidoselecionado)
@@ -26,10 +26,10 @@ def comparator():
 def validaItem(produto):
     roupa_dict = df.T.to_dict().values()
     for val in roupa_dict:
-        print (val.get(0))
-        if (produto == val.get(0)):
-            print("Produto encontrado: ".format(val.get(0)))
-            print(val.get(1))
+        print (val)
+        if (produto in val.get('CODIGO')):
+            print("Produto encontrado: ".format(val.get('CODIGO')))
+            print(val.get('CODIGO'))
             return val
 
 def get_simafic_as_dataframe():
@@ -39,7 +39,6 @@ def get_simafic_as_dataframe():
     return model
 
 def loadRawXLS():
-    df = pd.read_excel('plan_test.xlsx', index_col=None, header=0)
     roupa_dict = df.T.to_dict().values()
     for val in roupa_dict:
         #print (val.get(0))
@@ -47,7 +46,6 @@ def loadRawXLS():
     return pd.DataFrame.from_dict(roupa_dict)
 
 def loadValidXLS():
-    df = pd.read_excel('plan_test.xlsx', index_col=None, header=0)
     roupa_dict = df.T.to_dict().values()
     resultList = list()
     for val in roupa_dict:
@@ -83,7 +81,7 @@ if __name__ == "__main__":
     valoresPermitidos = json.loads(getConfig('filtros', 'tamanhos'))
     print(loadValidXLS())
     #get_simafic_as_dataframe()
-    #comparator()
+    comparator()
 else:
     df = pd.read_excel('plan_test.xlsx', index_col=None, header=0)
     valoresPermitidos = json.loads(getConfig('filtros', 'tamanhos'))
