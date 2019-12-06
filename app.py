@@ -47,6 +47,9 @@ class InoveApp(QDialog):
             self.topLeftGroupBox.setDisabled)
         disableWidgetsCheckBox.toggled.connect(
             self.topRightGroupBox.setDisabled)
+        disableWidgetsCheckBox.toggled.connect(
+            self.bottomLeftGroupBox.setDisabled
+        )
 
         topLayout = QHBoxLayout()
         topLayout.addWidget(styleLabel)
@@ -172,15 +175,20 @@ class InoveApp(QDialog):
         tab2hbox = QHBoxLayout()
         modelAllPedidos = get_all_pedidos()
 
-        proxyFilter = QSortFilterProxyModel()
-        proxyFilter.setSourceModel(modelAllPedidos)
-        proxyFilter.setFilterKeyColumn(5)
-        proxyFilter.setSortCaseSensitivity(Qt.CaseSensitive)
+        proxyPedidoFilter = QSortFilterProxyModel()
+        proxyPedidoFilter.setSourceModel(modelAllPedidos)
+        proxyPedidoFilter.setFilterKeyColumn(5)
+        proxyPedidoFilter.setSortCaseSensitivity(Qt.CaseSensitive)
         #tab2hbox.setContentsMargins(5, 5, 5, 5)
+
+        
+       
+        table2Widget.resizeColumnsToContents()
+        table2Widget.setColumnWidth(2, 100)
         tab2hbox.addWidget(table2Widget)
 
-        searchPedido.textChanged.connect(lambda wildcard: proxyFilter.setFilterWildcard(wildcard))
-        table2Widget.setModel(proxyFilter)
+        searchPedido.textChanged.connect(lambda wildcard: proxyPedidoFilter.setFilterWildcard(wildcard))
+        table2Widget.setModel(proxyPedidoFilter)
 
         
         #[First Tab] - Set Layout
@@ -189,8 +197,6 @@ class InoveApp(QDialog):
         layout.addItem(verticalSpacer)
         tab1ListaItens.setLayout(layout)
 
-
-        #TODO
       
         tabItensValidos = QWidget()
         tableItensValidos = QTableView()
@@ -201,9 +207,9 @@ class InoveApp(QDialog):
         
         tab1hbox = QHBoxLayout()
         #tab1hbox.setContentsMargins(5, 5, 5, 5)
-        
+        tableItensValidos.resizeColumnsToContents()
         tab1hbox.addWidget(tableItensValidos)
-
+        
         tabItensValidos.setLayout(tab1hbox)
 
 
@@ -218,27 +224,27 @@ class InoveApp(QDialog):
         output_pedido = QLineEdit()
         output_pedido.setReadOnly(True)
         output_pedido.setText('12345')
-        output_pedido.setDisabled(True)
+        #output_pedido.setDisabled(True)
 
         output_produto = QLineEdit()
         output_produto.setReadOnly(True)
         output_produto.setText('12345')
-        output_produto.setDisabled(True)
+        #output_produto.setDisabled(True)
 
         output_desc = QLineEdit()
         output_desc.setReadOnly(True)
         output_desc.setText('12345')
-        output_desc.setDisabled(True)
+        #output_desc.setDisabled(True)
 
         output_qtd_scanneada = QLineEdit()
         output_qtd_scanneada.setReadOnly(True)
         output_qtd_scanneada.setText('12345')
-        output_qtd_scanneada.setDisabled(True)
+        #output_qtd_scanneada.setDisabled(True)
 
         output_qtd_total = QLineEdit()
         output_qtd_total.setReadOnly(True)
         output_qtd_total.setText('12345')
-        output_qtd_total.setDisabled(True)
+        #output_qtd_total.setDisabled(True)
 
         id_pedido_label = QLabel("&Numero do Pedido: ")
         id_pedido_label.setBuddy(output_pedido)
