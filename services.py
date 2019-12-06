@@ -61,10 +61,7 @@ def loadValidXLS():
 
 def get_all_pedidos():
     arr = pdao.queryAllPedidos()
-    print(arr)
-    variables = pdao.Pedido.__dict__.keys()
-    print (variables)
-    df = pd.DataFrame([[getattr(i,j) for j in variables] for i in arr], columns = variables)
+    df = pd.DataFrame.from_records(s.asdict() for s in arr)
     return PandasModel(df)
 
 def get_main_icon():

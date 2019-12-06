@@ -59,8 +59,8 @@ class Pedido(Base):
             attrs=" ".join("{}={!r}".format(k, v) for k, v in self.__dict__.items()),
             )
             
-    '''def asdict(self):
-        return {'a': self.a, 'b': self.b, 'c': self.c}'''
+    def asdict(self):
+        return {'Pedido': self.id_pedido, 'Produto': self.id_product, 'desc': self.desc}
 
 if __name__ == "__main__":
     # Removendo todas as tabelas do banco.
