@@ -1,5 +1,5 @@
 import fix_qt_import_error
-from services import get_simafic_as_dataframe, get_main_icon, get_h_size, get_v_size, get_all_pedidos
+from services import get_simafic_as_dataframe, get_main_icon, get_h_size, get_v_size, get_all_pedidos, add_pedido
 from PyQt5.QtCore import QDateTime, Qt, QTimer, QSize, QSortFilterProxyModel
 from PyQt5 import QtGui
 from PyQt5.QtWidgets import (QApplication, QCheckBox, QComboBox, QDateTimeEdit,
@@ -38,8 +38,7 @@ class InoveApp(QDialog):
         self.createTopLeftGroupBox()
         self.createTopRightGroupBox()
         self.createBottomLeftGroupBox()
-        # self.createBottomRightGroupBox()
-        self.createProgressBar()
+        self.createSubmitButtons()
 
         styleComboBox.activated[str].connect(self.changeStyle)
         self.useStylePaletteCheckBox.toggled.connect(self.changePalette)
@@ -50,7 +49,10 @@ class InoveApp(QDialog):
         disableWidgetsCheckBox.toggled.connect(
             self.bottomLeftGroupBox.setDisabled
         )
-
+        '''disableWidgetsCheckBox.toggled.connect(
+            self.bottomLeftGroupBox.setHidden
+        )
+        '''
         topLayout = QHBoxLayout()
         topLayout.addWidget(styleLabel)
         topLayout.addWidget(styleComboBox)
@@ -66,10 +68,11 @@ class InoveApp(QDialog):
         mainLayout.addLayout(topLayout, 0, 0, 1, 2)
         mainLayout.addLayout(leftLayout, 1, 0)
         mainLayout.addWidget(self.topRightGroupBox, 1, 1)
-        mainLayout.addWidget(self.progressBar, 3, 0, 1, 2)
+        #mainLayout.addWidget(self.submitButtons, 3, 0, 1, 2)
         mainLayout.setRowStretch(1, 1)
         mainLayout.setColumnStretch(0, 1)
         mainLayout.setColumnStretch(1, 1)
+
         self.setLayout(mainLayout)
 
         self.changeStyle('windowsvista')
@@ -94,16 +97,16 @@ class InoveApp(QDialog):
                 error_dialog.exec_()
             '''
 
-    def advanceProgressBar(self):
-        curVal = self.progressBar.value()
-        maxVal = self.progressBar.maximum()
-        self.progressBar.setValue(curVal + (maxVal - curVal) / 100)
-
+   
     def createTopLeftGroupBox(self):
         self.topLeftGroupBox = QGroupBox("Dados do Pedido")
 
+        firstLayout = QHBoxLayout()
         pedido = QLineEdit(self)
         pedido.setPlaceholderText("Numero do Pedido")
+
+        firstLayout.addWidget(pedido)
+
         n_simafic = QLineEdit(self)
         n_simafic.setPlaceholderText("Numero SIMAFIC")
         qtd_items = QLineEdit(self)
@@ -116,16 +119,16 @@ class InoveApp(QDialog):
 
 
         '''ADD PEDIDO'''
-        add_pedido = QPushButton('Adicionar Item', self)
+        add_item = QPushButton('Adicionar Item', self)
         #Ainda falta conectar o submit
         #submit_btn.clicked.connect()
-        add_pedido.setStyleSheet('QPushButton { font-weight: bold; color: blue;}')
+        add_item.setStyleSheet('QPushButton { font-weight: bold; color: blue;}')
 
         '''SUBMIT BUTTON CONFIG'''
-        submit_btn = QPushButton('Prosseguir com o Scan', self)
+        #submit_btn = QPushButton('Prosseguir com o Scan', self)
         #Ainda falta conectar o submit
         #submit_btn.clicked.connect()
-        submit_btn.setStyleSheet('QPushButton { font-weight: bold; color: green;}')
+        #submit_btn.setStyleSheet('QPushButton { font-weight: bold; color: green;}')
 
         '''CLEAR BUTTON CONFIG '''
         clear_btn = QPushButton('Limpar Campos', self)
@@ -134,22 +137,26 @@ class InoveApp(QDialog):
         clear_btn.clicked.connect(n_simafic.clear)
         clear_btn.clicked.connect(qtd_items.clear)
 
-        checkBox = QCheckBox("Tri-state check box")
+        '''checkBox = QCheckBox("Tri-state check box")
         checkBox.setTristate(True)
-        checkBox.setCheckState(Qt.PartiallyChecked)
+        checkBox.setCheckState(Qt.PartiallyChecked)'''
+
+        secondlayout = QVBoxLayout()
+
+        secondlayout.addWidget(n_simafic)
+        secondlayout.addWidget(qtd_items)
+        #layout.addWidget(checkBox)
+        secondlayout.addStretch(1)
+        secondlayout.addWidget(add_item)
+        secondlayout.addWidget(clear_btn)
+        secondlayout.addStretch(2)
+
 
         layout = QVBoxLayout()
-        layout.addWidget(pedido)
-        layout.addWidget(n_simafic)
-        layout.addWidget(qtd_items)
-        layout.addWidget(checkBox)
-        layout.addStretch(1)
-        layout.addWidget(add_pedido)
-        layout.addStretch(1)
-        layout.addWidget(submit_btn)
-        layout.addStretch(1)
-        layout.addWidget(clear_btn)
-        layout.addStretch(2)
+        layout.addLayout(firstLayout)
+        layout.addLayout(secondlayout)
+        
+        
         self.topLeftGroupBox.setLayout(layout)
 
     def createTopRightGroupBox(self):
@@ -164,22 +171,28 @@ class InoveApp(QDialog):
         tab1ListaItens = QWidget()
         layout = QVBoxLayout(self)
 
-        #[First Tab] - Search Input
+        #[First Tab] - TextFields
         searchPedido = QLineEdit(self)
-        searchPedido.setPlaceholderText("Filtrar pedido: ")
+        searchPedido.setPlaceholderText("Filtrar por pedido: ")
+        searchProduto = QLineEdit(self)
+        searchProduto.setPlaceholderText("Filtrar por produto: ")
+
 
         #[First Tab] - Set TableView
-        
-
         table2Widget = QTableView()
         tab2hbox = QHBoxLayout()
         modelAllPedidos = get_all_pedidos()
 
+
+        #[First Tab] - Set Filters
         proxyPedidoFilter = QSortFilterProxyModel()
         proxyPedidoFilter.setSourceModel(modelAllPedidos)
-        proxyPedidoFilter.setFilterKeyColumn(5)
+        proxyPedidoFilter.setFilterKeyColumn(0)
         proxyPedidoFilter.setSortCaseSensitivity(Qt.CaseSensitive)
-        #tab2hbox.setContentsMargins(5, 5, 5, 5)
+        proxyProdutoFilter = QSortFilterProxyModel()
+        proxyProdutoFilter.setSourceModel(proxyPedidoFilter)
+        proxyProdutoFilter.setFilterKeyColumn(1)
+        proxyProdutoFilter.setSortCaseSensitivity(Qt.CaseSensitive)
 
         
        
@@ -187,12 +200,19 @@ class InoveApp(QDialog):
         table2Widget.setColumnWidth(2, 100)
         tab2hbox.addWidget(table2Widget)
 
+
+        #[Connect Fields]
+        searchProduto.textChanged.connect(lambda wildcard: proxyProdutoFilter.setFilterWildcard(wildcard))
         searchPedido.textChanged.connect(lambda wildcard: proxyPedidoFilter.setFilterWildcard(wildcard))
-        table2Widget.setModel(proxyPedidoFilter)
+        table2Widget.setModel(proxyProdutoFilter)
 
         
         #[First Tab] - Set Layout
-        layout.addWidget(searchPedido)
+        layoutText = QHBoxLayout()
+        layoutText.addWidget(searchPedido)
+        layoutText.addWidget(searchProduto)
+        
+        layout.addLayout(layoutText)
         layout.addWidget(table2Widget)
         layout.addItem(verticalSpacer)
         tab1ListaItens.setLayout(layout)
@@ -219,7 +239,7 @@ class InoveApp(QDialog):
         self.topRightGroupBox.addTab(tabItensValidos, "Itens de Itens:")
 
     def createBottomLeftGroupBox(self):
-        self.bottomLeftGroupBox = QGroupBox("Resumo")
+        self.bottomLeftGroupBox = QGroupBox("Itens do Pedido nº")
         
         output_pedido = QLineEdit()
         output_pedido.setReadOnly(True)
@@ -312,21 +332,149 @@ class InoveApp(QDialog):
         layout.setRowStretch(5, 1)
         self.bottomRightGroupBox.setLayout(layout)
 
-    def createProgressBar(self):
-        self.progressBar = QProgressBar()
-        self.progressBar.setRange(0, 10000)
-        self.progressBar.setValue(0)
+    def add_pedido(self, pedido):
+        print ("Add Pedido {}".format(pedido))
+        add_pedido(pedido)
 
-        timer = QTimer(self)
-        timer.timeout.connect(self.advanceProgressBar)
-        timer.start(1000)
+    def createSubmitButtons(self):
+        '''self.submitButtons = QGroupBox('Submit Buttons')
+        layout = QHBoxLayout()
+        adicionarpedido = QPushButton('&Confirmar Cadastro', self)
+        cancelarpedido = QPushButton('&Cancelar Cadastro', self)
+        layout.addWidget(adicionarpedido)
+        layout.addWidget(cancelarpedido) 
+        
+        self.submitButtons.setLayout(submitButtons)'''
+        pass
+
+
+
+import sys
+from PyQt5.QtGui     import *
+from PyQt5.QtCore    import *
+from PyQt5.QtWidgets import *
+
+class MainWindow(QMainWindow):
+    def __init__(self):
+        super().__init__()
+        self.title = "App"
+        self.InitUI()
+        self.setMinimumSize(QSize(640, 480))
+        self.originalPalette = QApplication.palette()
+        self.setWindowIcon(QtGui.QIcon(main_icon))
+        self.setWindowTitle("Inove")
+    
+
+    def InitUI(self):
+        self.setWindowTitle(self.title)
+        
+        layout = QHBoxLayout()
+        cadastrarNovoPedido = QPushButton('Cadastrar Novo Pedido', self)
+        cadastrarNovoPedido.setStyleSheet('QPushButton { font-weight: bold; color: blue;}')
+        cadastrarNovoPedido.move(200,200)
+        cadastrarNovoPedido.clicked.connect(self.cadastrarPedido)
+
+        layout.addWidget(cadastrarNovoPedido)
+        layout.addWidget(QPushButton('Realizar Operação Logística'))
+
+        buttonWindow2 = QPushButton('Window2', self)
+        buttonWindow2.move(100, 200)
+        buttonWindow2.clicked.connect(self.operacaoLogistica)        
+       
+        self.show()
+
+    @pyqtSlot()
+    def cadastrarPedido(self):
+        self.statusBar().showMessage("Switched to window 1")
+        self.cams = InoveApp() 
+        self.cams.show()
+        self.close()
+
+    @pyqtSlot()
+    def operacaoLogistica(self):
+        self.statusBar().showMessage("Switched to window 1")
+        self.cams = InoveApp() 
+        self.cams.show()
+        self.close()
+
+
+'''class Window1(QDialog):
+    def __init__(self, value, parent=None):
+        super().__init__(parent)
+        self.setWindowTitle('Window1')
+        self.setWindowIcon(self.style().standardIcon(QStyle.SP_FileDialogInfoView))
+
+        label1 = QLabel(value)
+        self.button = QPushButton()
+        self.button.setSizePolicy(QSizePolicy.Minimum, QSizePolicy.Expanding)
+        self.button.setIcon(self.style().standardIcon(QStyle.SP_ArrowLeft))
+        self.button.setIconSize(QSize(200, 200))
+
+        layoutV = QVBoxLayout()
+        self.pushButton = QPushButton(self)
+        self.pushButton.setStyleSheet('background-color: rgb(0,0,255); color: #fff')
+        self.pushButton.setText('Click me!')
+        self.pushButton.clicked.connect(self.goMainWindow)
+        layoutV.addWidget(self.pushButton)
+
+        layoutH = QHBoxLayout()
+        layoutH.addWidget(label1)
+        layoutH.addWidget(self.button)
+        layoutV.addLayout(layoutH)
+        self.setLayout(layoutV)
+
+    def goMainWindow(self):
+        self.cams = MainWindow()
+        self.cams.show()
+        self.close() 
+
+
+'''
+
+class Window2(QDialog):
+    def __init__(self, value, parent=None):
+        super().__init__(parent)
+        self.setWindowTitle('Window2')
+        self.setWindowIcon(self.style().standardIcon(QStyle.SP_FileDialogInfoView))
+
+        label1 = QLabel(value)
+        self.button = QPushButton()
+        self.button.setSizePolicy(QSizePolicy.Minimum, QSizePolicy.Expanding)
+        self.button.setIcon(self.style().standardIcon(QStyle.SP_ArrowLeft))
+        self.button.setIconSize(QSize(200, 200))
+
+        layoutV = QVBoxLayout()
+        self.pushButton = QPushButton(self)
+        self.pushButton.setStyleSheet('background-color: rgb(0,0,255); color: #fff')
+        self.pushButton.setText('Click me!')
+        self.pushButton.clicked.connect(self.goMainWindow)
+        layoutV.addWidget(self.pushButton)
+
+        layoutH = QHBoxLayout()
+        layoutH.addWidget(label1)
+        layoutH.addWidget(self.button)
+        layoutV.addLayout(layoutH)
+        self.setLayout(layoutV)
+
+    def goMainWindow(self):
+        self.cams = MainWindow()
+        self.cams.show()
+        self.close()    
+
+'''
+if __name__ == '__main__':
+    app=QApplication(sys.argv)
+    ex=MainWindow()
+    sys.exit(app.exec_())'''
 
 if __name__ == '__main__':
 
     import sys
 
     app = QApplication(sys.argv)
-    gallery = InoveApp()
-    gallery.show()
+    mainView = MainWindow()
+    mainView.show()
+    
+    #gallery.show()
     #gallery.showMaximized()
     sys.exit(app.exec_())

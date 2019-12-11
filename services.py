@@ -59,6 +59,15 @@ def loadValidXLS():
     resultdf.reindex(index=range(1,len(resultList)))
     return pd.DataFrame.from_dict(resultList)
 
+def add_pedido(id_pedido):
+    print('Add Pedido')
+    result = pdao.dinamicQuery(id_pedido)
+    if result:
+        print ('Pedido encontrato')
+    else:
+        print ('Not today')
+
+
 def get_all_pedidos():
     arr = pdao.queryAllPedidos()
     df = pd.DataFrame.from_records(s.asdict() for s in arr)
