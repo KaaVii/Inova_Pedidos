@@ -1,9 +1,9 @@
 import fix_qt_import_error
 from services import get_simafic_as_dataframe, get_main_icon, get_h_size, get_v_size, get_all_pedidos, add_pedido
-from PyQt5.QtCore import QDateTime, Qt, QTimer, QSize, QSortFilterProxyModel
+from PyQt5.QtCore import QDateTime, Qt, QTimer, QSize, QSortFilterProxyModel, pyqtSlot
 from PyQt5 import QtGui
 from PyQt5.QtWidgets import (QApplication, QCheckBox, QComboBox, QDateTimeEdit,
-                             QDial, QDialog, QGridLayout, QGroupBox, QHBoxLayout, QLabel, QLineEdit,
+                             QDial, QDialog,QMainWindow, QGridLayout, QGroupBox, QHBoxLayout, QLabel, QLineEdit,
                              QProgressBar, QPushButton, QRadioButton, QScrollBar, QSizePolicy,
                              QSlider, QSpinBox, QStyleFactory, QTableWidget, QTabWidget, QTextEdit,
                              QVBoxLayout, QWidget, QErrorMessage, QTableView, QSpacerItem)
@@ -13,10 +13,10 @@ main_icon = str(get_main_icon())
 h_size=int(get_h_size())
 v_size=int(get_v_size())
 
-class InoveApp(QDialog):
+class CadastroPedidos(QDialog):
 
     def __init__(self, parent=None):
-        super(InoveApp, self).__init__(parent)
+        super(CadastroPedidos, self).__init__(parent)
 
         self.setMinimumSize(QSize(h_size, v_size))
         self.originalPalette = QApplication.palette()
@@ -26,8 +26,13 @@ class InoveApp(QDialog):
         styleComboBox = QComboBox()
         styleComboBox.addItems(QStyleFactory.keys())
 
-        styleLabel = QLabel("&Style:")
+        styleLabel = QLabel("&Estilo:")
         styleLabel.setBuddy(styleComboBox)
+        
+        voltar_btn = QPushButton(self)
+        voltar_btn.setText('Voltar')
+        voltar_btn.clicked.connect(self.goMainWindow)
+
 
         self.useStylePaletteCheckBox = QCheckBox(
             "&Use style's standard palette")
@@ -56,6 +61,7 @@ class InoveApp(QDialog):
         topLayout = QHBoxLayout()
         topLayout.addWidget(styleLabel)
         topLayout.addWidget(styleComboBox)
+        topLayout.addWidget(voltar_btn)
         topLayout.addStretch(1)
         topLayout.addWidget(self.useStylePaletteCheckBox)
         topLayout.addWidget(disableWidgetsCheckBox)
@@ -347,61 +353,148 @@ class InoveApp(QDialog):
         self.submitButtons.setLayout(submitButtons)'''
         pass
 
+    def goMainWindow(self):
+        self.cams = MainWindow()
+        self.cams.show()
+        self.close()
 
-
-import sys
-from PyQt5.QtGui     import *
-from PyQt5.QtCore    import *
-from PyQt5.QtWidgets import *
 
 class MainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
         self.title = "App"
-        self.InitUI()
         self.setMinimumSize(QSize(640, 480))
         self.originalPalette = QApplication.palette()
         self.setWindowIcon(QtGui.QIcon(main_icon))
         self.setWindowTitle("Inove")
-    
+        self.InitUI()
 
     def InitUI(self):
         self.setWindowTitle(self.title)
         
-        layout = QHBoxLayout()
-        cadastrarNovoPedido = QPushButton('Cadastrar Novo Pedido', self)
-        cadastrarNovoPedido.setStyleSheet('QPushButton { font-weight: bold; color: blue;}')
-        cadastrarNovoPedido.move(200,200)
-        cadastrarNovoPedido.clicked.connect(self.cadastrarPedido)
+        #layout = QHBoxLayout()
+        cadastrarNovoPedidoBtn = QPushButton('Cadastrar Novo Pedido', self)
+        cadastrarNovoPedidoBtn.setStyleSheet('QPushButton { font-weight: bold; color: blue;}')
+        cadastrarNovoPedidoBtn.clicked.connect(self.cadastrarPedido)
 
-        layout.addWidget(cadastrarNovoPedido)
-        layout.addWidget(QPushButton('Realizar Operação Logística'))
+        
 
-        buttonWindow2 = QPushButton('Window2', self)
-        buttonWindow2.move(100, 200)
-        buttonWindow2.clicked.connect(self.operacaoLogistica)        
-       
+        efetuarOperacaoLogBtn = QPushButton('Operação Logística', self)
+        efetuarOperacaoLogBtn.setStyleSheet('QPushButton { font-weight: bold; color: green;}')
+        efetuarOperacaoLogBtn.clicked.connect(self.operacaoLogistica)
+
+
+        efetuarOperacaoLogBtn.resize(200,200)
+        efetuarOperacaoLogBtn.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
+        cadastrarNovoPedidoBtn.resize(200,200)
+        cadastrarNovoPedidoBtn.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
+
+        layout = QGridLayout()
+        layout.addWidget(cadastrarNovoPedidoBtn,0,0)
+        layout.addWidget(efetuarOperacaoLogBtn,0,1)
+        
+        wid = QWidget(self)
+        self.setCentralWidget(wid)
+        wid.setLayout(layout)
         self.show()
 
     @pyqtSlot()
     def cadastrarPedido(self):
-        self.statusBar().showMessage("Switched to window 1")
-        self.cams = InoveApp() 
+        self.statusBar().showMessage("Switched to CadastroPedidos")
+        self.cams = CadastroPedidos() 
         self.cams.show()
         self.close()
 
     @pyqtSlot()
     def operacaoLogistica(self):
-        self.statusBar().showMessage("Switched to window 1")
-        self.cams = InoveApp() 
+        self.statusBar().showMessage("Switched to OperacaoLogistica")
+        self.cams = OperacaoLogistica() 
+        self.cams.show()
+        self.close()
+        
+
+class OperacaoLogistica(QDialog):
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.setWindowTitle('Operação Logística')
+        self.setMinimumSize(QSize(640, 480))
+        self.setWindowIcon(QtGui.QIcon(main_icon))
+
+        verticalSpacer = QSpacerItem(40, 20, QSizePolicy.Minimum, QSizePolicy.Expanding)
+
+
+        #Pedido Input Field
+        self.numero_pedido = QLineEdit(self)
+        self.numero_pedido.setPlaceholderText("Insira o Número do Pedido")
+
+
+        #Procurar Pedido Btn
+        self.procurar_pedido_btn = QPushButton("Procurar Pedido", self)
+        self.procurar_pedido_btn.setIconSize(QSize(200, 200))
+        self.procurar_pedido_btn.clicked.connect(self.goScan)
+
+        #Voltar Btn
+        self.voltar_btn = QPushButton(self)
+        #self.voltar_btn.setStyleSheet('background-color: rgb(0,0,255); color: #fff')
+        self.voltar_btn.setText('Voltar')
+        self.voltar_btn.clicked.connect(self.goMainWindow)
+        self.close()
+
+        '''#Layout Vertical
+        layoutV = QHBoxLayout()
+        layoutH = QHBoxLayout()
+        layoutH.addWidget(self.numero_pedido)
+        layoutH.addWidget(self.procurar_pedido_btn)
+        layoutH.addWidget(self.voltar_btn)
+        layoutV.addLayout(layoutH)
+        layoutV.addItem(verticalSpacer)
+        self.setLayout(layoutV)'''
+
+        colors = ['##393318', '  ##fff']
+
+        w = QListWidget()
+        for n in range(8):
+            i = QListWidgetItem('%s' % n)
+            item = QListWidgetItem()
+            text = "teste{}".format(1)
+            item.setText(text)
+            item.setData(n, text)
+            
+            if( n % 2 ==0):
+                i.setBackground( QColor('#c8ccd0') )
+            else:
+                i.setBackground( QColor('#ffffff') )
+            w.addItem(i)
+            itemclicked = w.itemClicked.connect(lambda item: self.simaficSelecionado(item))
+
+        #Layout Vertical
+        layout = QGridLayout()
+        layout.addWidget(self.numero_pedido,0,0)
+        layout.addWidget(self.procurar_pedido_btn,0,1)
+        layout.addWidget(self.voltar_btn,0,2)
+        layout.addWidget(w)
+        layout.addItem(verticalSpacer)
+        self.setLayout(layout)
+
+    def simaficSelecionado(self, value):
+        print (value.text())
+
+    def goMainWindow(self):
+        self.cams = MainWindow()
+        self.cams.show()
+        self.close()
+
+    def goScan(self):
+        self.cams = ItemScanner(self.numero_pedido.text())
         self.cams.show()
         self.close()
 
 
-'''class Window1(QDialog):
+class ItemScanner(QDialog):
     def __init__(self, value, parent=None):
         super().__init__(parent)
-        self.setWindowTitle('Window1')
+        self.setWindowTitle('Scanner')
+        self.setMinimumSize(QSize(640, 480))
         self.setWindowIcon(self.style().standardIcon(QStyle.SP_FileDialogInfoView))
 
         label1 = QLabel(value)
@@ -413,7 +506,7 @@ class MainWindow(QMainWindow):
         layoutV = QVBoxLayout()
         self.pushButton = QPushButton(self)
         self.pushButton.setStyleSheet('background-color: rgb(0,0,255); color: #fff')
-        self.pushButton.setText('Click me!')
+        self.pushButton.setText(value)
         self.pushButton.clicked.connect(self.goMainWindow)
         layoutV.addWidget(self.pushButton)
 
@@ -428,38 +521,6 @@ class MainWindow(QMainWindow):
         self.cams.show()
         self.close() 
 
-
-'''
-
-class Window2(QDialog):
-    def __init__(self, value, parent=None):
-        super().__init__(parent)
-        self.setWindowTitle('Window2')
-        self.setWindowIcon(self.style().standardIcon(QStyle.SP_FileDialogInfoView))
-
-        label1 = QLabel(value)
-        self.button = QPushButton()
-        self.button.setSizePolicy(QSizePolicy.Minimum, QSizePolicy.Expanding)
-        self.button.setIcon(self.style().standardIcon(QStyle.SP_ArrowLeft))
-        self.button.setIconSize(QSize(200, 200))
-
-        layoutV = QVBoxLayout()
-        self.pushButton = QPushButton(self)
-        self.pushButton.setStyleSheet('background-color: rgb(0,0,255); color: #fff')
-        self.pushButton.setText('Click me!')
-        self.pushButton.clicked.connect(self.goMainWindow)
-        layoutV.addWidget(self.pushButton)
-
-        layoutH = QHBoxLayout()
-        layoutH.addWidget(label1)
-        layoutH.addWidget(self.button)
-        layoutV.addLayout(layoutH)
-        self.setLayout(layoutV)
-
-    def goMainWindow(self):
-        self.cams = MainWindow()
-        self.cams.show()
-        self.close()    
 
 '''
 if __name__ == '__main__':
