@@ -46,11 +46,11 @@ class Pedido(Base):
         :param idade: (int).
         :param sexo: (str).
         """
-        self.id_pedido = id_pedido
-        self.id_product = id_product
-        self.desc = desc
-        self.qty_total = qty_total
-        self.qty_scanneada = qty_scanneada
+        self.id_pedido = int(id_pedido)
+        self.id_product = str(id_product)
+        self.desc = str(desc)
+        self.qty_total = int(qty_total)
+        self.qty_scanneada = int(qty_scanneada)
 
     def __repr__(self):
         return "<{klass} @{id:x} {attrs}>".format(

@@ -1,17 +1,24 @@
 import fix_qt_import_error
-from services import get_simafic_as_dataframe, get_main_icon, get_h_size, get_v_size, get_all_pedidos, add_pedido
+from exceptions import ValidationError
+from services import (get_simafic_as_dataframe, get_main_icon, get_h_size, get_v_size, get_all_pedidos, add_pedido,validateCadastro,ValidationError)
+from assets.style import getStyle
 from PyQt5.QtCore import QDateTime, Qt, QTimer, QSize, QSortFilterProxyModel, pyqtSlot
 from PyQt5 import QtGui
+from PyQt5.QtGui import QColor, QFont, QIcon
 from PyQt5.QtWidgets import (QApplication, QCheckBox, QComboBox, QDateTimeEdit,
                              QDial, QDialog,QMainWindow, QGridLayout, QGroupBox, QHBoxLayout, QLabel, QLineEdit,
                              QProgressBar, QPushButton, QRadioButton, QScrollBar, QSizePolicy,
-                             QSlider, QSpinBox, QStyleFactory, QTableWidget, QTabWidget, QTextEdit,
-                             QVBoxLayout, QWidget, QErrorMessage, QTableView, QSpacerItem)
+                             QSlider, QSpinBox, QStyleFactory, QTableWidget, QTabWidget, QTextEdit, QFormLayout,
+                             QVBoxLayout, QWidget, QErrorMessage, QTableView, QSpacerItem, QListWidget, QListWidgetItem, QStyle)
 
 
 main_icon = str(get_main_icon())
 h_size=int(get_h_size())
 v_size=int(get_v_size())
+
+style = getStyle()
+
+
 
 class CadastroPedidos(QDialog):
 
@@ -20,51 +27,29 @@ class CadastroPedidos(QDialog):
 
         self.setMinimumSize(QSize(h_size, v_size))
         self.originalPalette = QApplication.palette()
-        self.setWindowIcon(QtGui.QIcon(main_icon))
-        self.setWindowTitle("Inove")
+        self.setWindowIcon(QIcon(main_icon))
+        self.setWindowTitle("Cadastro de Pedidos")
+        self.setStyleSheet(style)
 
-        styleComboBox = QComboBox()
-        styleComboBox.addItems(QStyleFactory.keys())
-
-        styleLabel = QLabel("&Estilo:")
-        styleLabel.setBuddy(styleComboBox)
+       #Sempre que for iniciado criará um objeto data
+        self.data = dict()
         
         voltar_btn = QPushButton(self)
         voltar_btn.setText('Voltar')
         voltar_btn.clicked.connect(self.goMainWindow)
 
-
-        self.useStylePaletteCheckBox = QCheckBox(
-            "&Use style's standard palette")
-        self.useStylePaletteCheckBox.setChecked(True)
-
-        disableWidgetsCheckBox = QCheckBox("&Disable widgets")
-
-        self.createTopLeftGroupBox()
-        self.createTopRightGroupBox()
-        self.createBottomLeftGroupBox()
-        self.createSubmitButtons()
-
-        styleComboBox.activated[str].connect(self.changeStyle)
-        self.useStylePaletteCheckBox.toggled.connect(self.changePalette)
-        disableWidgetsCheckBox.toggled.connect(
-            self.topLeftGroupBox.setDisabled)
-        disableWidgetsCheckBox.toggled.connect(
-            self.topRightGroupBox.setDisabled)
-        disableWidgetsCheckBox.toggled.connect(
-            self.bottomLeftGroupBox.setDisabled
-        )
+        self.dadosDoPedido()
+        self.resumoGeral()
+        self.resumoDosItens()
+       
         '''disableWidgetsCheckBox.toggled.connect(
             self.bottomLeftGroupBox.setHidden
         )
         '''
+
         topLayout = QHBoxLayout()
-        topLayout.addWidget(styleLabel)
-        topLayout.addWidget(styleComboBox)
         topLayout.addWidget(voltar_btn)
-        topLayout.addStretch(1)
-        topLayout.addWidget(self.useStylePaletteCheckBox)
-        topLayout.addWidget(disableWidgetsCheckBox)
+
 
         leftLayout = QVBoxLayout()
         leftLayout.addWidget(self.topLeftGroupBox, 50)
@@ -80,92 +65,64 @@ class CadastroPedidos(QDialog):
         mainLayout.setColumnStretch(1, 1)
 
         self.setLayout(mainLayout)
-
-        self.changeStyle('windowsvista')
-
-    def changeStyle(self, styleName):
-        QApplication.setStyle(QStyleFactory.create(styleName))
-        print(styleName)
-        self.changePalette()
-
-    def changePalette(self):
-        if (self.useStylePaletteCheckBox.isChecked()):
-            QApplication.setPalette(QApplication.style().standardPalette())
-        else:
-            QApplication.setPalette(self.originalPalette)
-            '''
-            try:
-                raise ValueError('A very specific bad thing happened.')
-            except ValueError as error:
-                error_dialog = QErrorMessage()
-                error_dialog.setWindowIcon(main_icon)
-                error_dialog.showMessage('Oh no!')
-                error_dialog.exec_()
-            '''
-
    
-    def createTopLeftGroupBox(self):
+    def dadosDoPedido(self):
         self.topLeftGroupBox = QGroupBox("Dados do Pedido")
 
-        firstLayout = QHBoxLayout()
-        pedido = QLineEdit(self)
-        pedido.setPlaceholderText("Numero do Pedido")
+        verticalSpacer = QSpacerItem(40, 20, QSizePolicy.Minimum, QSizePolicy.Expanding)
 
-        firstLayout.addWidget(pedido)
+        formLayout = QFormLayout()
+        self.pedido = QLineEdit(self)
+        self.pedido.setPlaceholderText("ex: 2112")
+        pedido_label = QLabel("Pedido:")
 
-        n_simafic = QLineEdit(self)
-        n_simafic.setPlaceholderText("Numero SIMAFIC")
-        qtd_items = QLineEdit(self)
-        qtd_items.setPlaceholderText("Qtd. de Items")
+        self.n_simafic = QLineEdit(self)
+        self.n_simafic.setPlaceholderText("ex: 08.04.02.507-6")
+        n_simafic_label = QLabel("Numero SIMAFIC:")
 
-        radioButton1 = QRadioButton("Radio button 1")
-        radioButton2 = QRadioButton("Radio button 2")
-        radioButton3 = QRadioButton("Radio button 3")
-        radioButton1.setChecked(True)
-
+        self.qtd_items = QLineEdit(self)
+        self.qtd_items.setPlaceholderText("ex: 100")
+        qtd_items_label = QLabel("Quantidade de Items:")
 
         '''ADD PEDIDO'''
         add_item = QPushButton('Adicionar Item', self)
-        #Ainda falta conectar o submit
-        #submit_btn.clicked.connect()
-        add_item.setStyleSheet('QPushButton { font-weight: bold; color: blue;}')
-
-        '''SUBMIT BUTTON CONFIG'''
-        #submit_btn = QPushButton('Prosseguir com o Scan', self)
-        #Ainda falta conectar o submit
-        #submit_btn.clicked.connect()
-        #submit_btn.setStyleSheet('QPushButton { font-weight: bold; color: green;}')
+        add_item.setObjectName('Add')
+        add_item.setIcon(QIcon('assets/check_icon_blue2.png'))
+        add_item.clicked.connect(self.add_items)
 
         '''CLEAR BUTTON CONFIG '''
         clear_btn = QPushButton('Limpar Campos', self)
-        clear_btn.setStyleSheet('QPushButton { font-weight: bold; color: red;}')
-        clear_btn.clicked.connect(pedido.clear)
-        clear_btn.clicked.connect(n_simafic.clear)
-        clear_btn.clicked.connect(qtd_items.clear)
+        clear_btn.setObjectName('Yellow')
+        clear_btn.setIcon(QIcon('assets/eraser.png'))
+        clear_btn.clicked.connect(self.pedido.clear)
+        clear_btn.clicked.connect(self.n_simafic.clear)
+        clear_btn.clicked.connect(self.qtd_items.clear)
 
+        
+        formLayout.addRow(pedido_label, self.pedido)
+        formLayout.addRow(n_simafic_label, self.n_simafic)
+        formLayout.addRow(qtd_items_label, self.qtd_items)
+        formLayout.addItem(verticalSpacer)
+        formLayout.addRow(add_item)
+        formLayout.addRow(clear_btn)
+ 
         '''checkBox = QCheckBox("Tri-state check box")
         checkBox.setTristate(True)
         checkBox.setCheckState(Qt.PartiallyChecked)'''
 
-        secondlayout = QVBoxLayout()
-
-        secondlayout.addWidget(n_simafic)
-        secondlayout.addWidget(qtd_items)
         #layout.addWidget(checkBox)
-        secondlayout.addStretch(1)
-        secondlayout.addWidget(add_item)
-        secondlayout.addWidget(clear_btn)
-        secondlayout.addStretch(2)
+        '''formLayout.addWidget(add_item)
+        formLayout.addWidget(clear_btn)'''
+        
 
 
         layout = QVBoxLayout()
-        layout.addLayout(firstLayout)
-        layout.addLayout(secondlayout)
-        
-        
+        layout.addLayout(formLayout)
+        layout.addStretch(2)
+         
         self.topLeftGroupBox.setLayout(layout)
 
-    def createTopRightGroupBox(self):
+    def resumoGeral(self):
         self.topRightGroupBox = QTabWidget()
         self.topRightGroupBox.setSizePolicy(QSizePolicy.Preferred,
                                             QSizePolicy.Ignored)
@@ -238,120 +195,47 @@ class CadastroPedidos(QDialog):
         
         tabItensValidos.setLayout(tab1hbox)
 
-
-
-      
         self.topRightGroupBox.addTab(tab1ListaItens, "&Lista de Pedidos: ")
         self.topRightGroupBox.addTab(tabItensValidos, "Itens de Itens:")
 
-    def createBottomLeftGroupBox(self):
-        self.bottomLeftGroupBox = QGroupBox("Itens do Pedido nº")
+    def resumoDosItens(self):
+        self.bottomLeftGroupBox = QGroupBox("Lista de Itens do Pedido nº")
         
-        output_pedido = QLineEdit()
-        output_pedido.setReadOnly(True)
-        output_pedido.setText('12345')
-        #output_pedido.setDisabled(True)
+        self.listDataItens = list()
+        self.listaViewItens=QListWidget()
 
-        output_produto = QLineEdit()
-        output_produto.setReadOnly(True)
-        output_produto.setText('12345')
-        #output_produto.setDisabled(True)
-
-        output_desc = QLineEdit()
-        output_desc.setReadOnly(True)
-        output_desc.setText('12345')
-        #output_desc.setDisabled(True)
-
-        output_qtd_scanneada = QLineEdit()
-        output_qtd_scanneada.setReadOnly(True)
-        output_qtd_scanneada.setText('12345')
-        #output_qtd_scanneada.setDisabled(True)
-
-        output_qtd_total = QLineEdit()
-        output_qtd_total.setReadOnly(True)
-        output_qtd_total.setText('12345')
-        #output_qtd_total.setDisabled(True)
-
-        id_pedido_label = QLabel("&Numero do Pedido: ")
-        id_pedido_label.setBuddy(output_pedido)
-        id_produto_label =QLabel("&Produto: ")
-        id_produto_label.setBuddy(output_pedido)
-        desc_label = QLabel("&Desc: ")
-        desc_label.setBuddy(output_desc)
-        qty_scanneada = QLabel("&Qtd Scanneada.: ")
-        qty_scanneada.setBuddy(output_qtd_scanneada)
-        qty_total = QLabel("&Qtd Total: ")
-        qty_total.setBuddy(output_qtd_total)
+        removeSelected = QPushButton('Remover Itens Selecionados')
+        removeSelected.clicked.connect(self.removerItens)
 
         layout = QGridLayout()
+        layout.addWidget(removeSelected)
         
         verticalSpacer = QSpacerItem(40, 20, QSizePolicy.Minimum, QSizePolicy.Expanding)
 
-
-        layout.addWidget(id_pedido_label, 0, 0)
-        layout.addWidget(output_pedido, 1, 0)
-        layout.addWidget(id_produto_label, 0, 1)
-        layout.addWidget(output_produto, 1, 1)
-        layout.addWidget(desc_label, 2,0)
-        layout.addWidget(output_desc, 3,0)
-        layout.addWidget(qty_scanneada, 2, 1)
-        layout.addWidget(output_qtd_scanneada, 3, 1)
-        layout.addWidget(qty_total, 2, 2)
-        layout.addWidget(output_qtd_total, 3, 2)
-        layout.addItem(verticalSpacer, 6, 0, Qt.AlignTop)
-        
-
-
         self.bottomLeftGroupBox.setLayout(layout)
 
-    def createBottomRightGroupBox(self):
-        self.bottomRightGroupBox = QGroupBox("Group 3")
-        self.bottomRightGroupBox.setCheckable(True)
-        self.bottomRightGroupBox.setChecked(True)
-
-        lineEdit = QLineEdit('s3cRe7')
-        lineEdit.setEchoMode(QLineEdit.Password)
-
-        spinBox = QSpinBox(self.bottomRightGroupBox)
-        spinBox.setValue(50)
-
-        dateTimeEdit = QDateTimeEdit(self.bottomRightGroupBox)
-        dateTimeEdit.setDateTime(QDateTime.currentDateTime())
-
-        slider = QSlider(Qt.Horizontal, self.bottomRightGroupBox)
-        slider.setValue(40)
-
-        scrollBar = QScrollBar(Qt.Horizontal, self.bottomRightGroupBox)
-        scrollBar.setValue(60)
-
-        dial = QDial(self.bottomRightGroupBox)
-        dial.setValue(30)
-        dial.setNotchesVisible(True)
-
-        layout = QGridLayout()
-        layout.addWidget(lineEdit, 0, 0, 1, 2)
-        layout.addWidget(spinBox, 1, 0, 1, 2)
-        layout.addWidget(dateTimeEdit, 2, 0, 1, 2)
-        layout.addWidget(slider, 3, 0)
-        layout.addWidget(scrollBar, 4, 0)
-        layout.addWidget(dial, 3, 1, 2, 1)
-        layout.setRowStretch(5, 1)
-        self.bottomRightGroupBox.setLayout(layout)
-
-    def add_pedido(self, pedido):
-        print ("Add Pedido {}".format(pedido))
-        add_pedido(pedido)
-
-    def createSubmitButtons(self):
-        '''self.submitButtons = QGroupBox('Submit Buttons')
-        layout = QHBoxLayout()
-        adicionarpedido = QPushButton('&Confirmar Cadastro', self)
-        cancelarpedido = QPushButton('&Cancelar Cadastro', self)
-        layout.addWidget(adicionarpedido)
-        layout.addWidget(cancelarpedido) 
+    def add_items(self):
+        try:
+            pedido, n_simafic, qtd_items = self.pedido.text(), self.n_simafic.text(), self.qtd_items.text()
+            if validateCadastro(self.pedido.text(), self.n_simafic.text(), self.qtd_items.text()):
+                print ("Validação concluída...")
+                print ("Add Pedido: {} {} {}".format(self.pedido.text(), self.n_simafic.text(), self.qtd_items.text()))
+                add_pedido(pedido, n_simafic, qtd_items)
+        except ValidationError as error:
+            error_dialog = QErrorMessage()
+            error_dialog.setWindowTitle(error.errors)
+            error_dialog.setWindowIcon(QIcon(main_icon))
+            error_dialog.showMessage(error.message)
+            error_dialog.exec_()
         
-        self.submitButtons.setLayout(submitButtons)'''
         pass
+        #add_pedido(pedido)
+
+    def removerItens(self):
+        listItems=self.listaViewItens.selectedItems()
+        if not listItems: return        
+        for item in listItems:
+            print (type(item), dir(item))
 
     def goMainWindow(self):
         self.cams = MainWindow()
@@ -362,25 +246,61 @@ class CadastroPedidos(QDialog):
 class MainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
-        self.title = "App"
-        self.setMinimumSize(QSize(640, 480))
+        self.title = "Inove App"
+        self.setMinimumSize(QSize(h_size, v_size))
         self.originalPalette = QApplication.palette()
         self.setWindowIcon(QtGui.QIcon(main_icon))
         self.setWindowTitle("Inove")
+        self.setStyleSheet(style)
         self.InitUI()
 
     def InitUI(self):
         self.setWindowTitle(self.title)
+        styleComboBox = QComboBox()
+        styleComboBox.addItems(QStyleFactory.keys())
+
+
+        styleLabel = QLabel("&Estilo:")
+        styleLabel.setBuddy(styleComboBox)
+
+        self.useStylePaletteCheckBox = QCheckBox(
+            "&Use style's standard palette")
+        self.useStylePaletteCheckBox.setChecked(True)
+
+        disableWidgetsCheckBox = QCheckBox("&Disable widgets")
+
+
+        styleComboBox.activated[str].connect(self.changeStyle)
+        '''self.useStylePaletteCheckBox.toggled.connect(self.changePalette)
+        disableWidgetsCheckBox.toggled.connect(
+            self.topLeftGroupBox.setDisabled)
+        disableWidgetsCheckBox.toggled.connect(
+            self.topRightGroupBox.setDisabled)
+        disableWidgetsCheckBox.toggled.connect(
+            self.bottomLeftGroupBox.setDisabled
+        )'''
+        topLayout = QHBoxLayout()
+        topLayout.addWidget(styleLabel)
+        topLayout.addWidget(styleComboBox)
+        topLayout.addStretch(1)
+        topLayout.addWidget(self.useStylePaletteCheckBox)
+        topLayout.addWidget(disableWidgetsCheckBox)
         
+        font = QFont()
+        font.setPointSize(20)
+
         #layout = QHBoxLayout()
         cadastrarNovoPedidoBtn = QPushButton('Cadastrar Novo Pedido', self)
-        cadastrarNovoPedidoBtn.setStyleSheet('QPushButton { font-weight: bold; color: blue;}')
+        cadastrarNovoPedidoBtn.setObjectName('Blue')
+        cadastrarNovoPedidoBtn.setFont(font)
+        cadastrarNovoPedidoBtn.setIcon(QIcon('assets/cadastro_blue.png'))
+        cadastrarNovoPedidoBtn.setIconSize(QSize(40, 40))
         cadastrarNovoPedidoBtn.clicked.connect(self.cadastrarPedido)
-
-        
-
         efetuarOperacaoLogBtn = QPushButton('Operação Logística', self)
-        efetuarOperacaoLogBtn.setStyleSheet('QPushButton { font-weight: bold; color: green;}')
+        efetuarOperacaoLogBtn.setObjectName('Green')
+        efetuarOperacaoLogBtn.setFont(font)
+        efetuarOperacaoLogBtn.setIcon(QIcon('assets/logistica_green.png'))
+        efetuarOperacaoLogBtn.setIconSize(QSize(40,40))
         efetuarOperacaoLogBtn.clicked.connect(self.operacaoLogistica)
 
 
@@ -390,13 +310,35 @@ class MainWindow(QMainWindow):
         cadastrarNovoPedidoBtn.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
 
         layout = QGridLayout()
-        layout.addWidget(cadastrarNovoPedidoBtn,0,0)
-        layout.addWidget(efetuarOperacaoLogBtn,0,1)
+        layout.addLayout(topLayout, 0, 0, 1, 2)
+        layout.addWidget(cadastrarNovoPedidoBtn,1,0)
+        layout.addWidget(efetuarOperacaoLogBtn,1,1)
         
         wid = QWidget(self)
         self.setCentralWidget(wid)
         wid.setLayout(layout)
         self.show()
+
+    def changeStyle(self, styleName):
+        QApplication.setStyle(QStyleFactory.create(styleName))
+        print(styleName)
+        self.changePalette()
+
+
+    def changePalette(self):
+        if (self.useStylePaletteCheckBox.isChecked()):
+            QApplication.setPalette(QApplication.style().standardPalette())
+        else:
+            QApplication.setPalette(self.originalPalette)
+            '''
+            try:
+                raise ValueError('A very specific bad thing happened.')
+            except ValueError as error:
+                error_dialog = QErrorMessage()
+                error_dialog.setWindowIcon(main_icon)
+                error_dialog.showMessage('Oh no!')
+                error_dialog.exec_()
+            '''
 
     @pyqtSlot()
     def cadastrarPedido(self):
@@ -417,7 +359,7 @@ class OperacaoLogistica(QDialog):
     def __init__(self, parent=None):
         super().__init__(parent)
         self.setWindowTitle('Operação Logística')
-        self.setMinimumSize(QSize(640, 480))
+        self.setMinimumSize(QSize(h_size, v_size))
         self.setWindowIcon(QtGui.QIcon(main_icon))
 
         verticalSpacer = QSpacerItem(40, 20, QSizePolicy.Minimum, QSizePolicy.Expanding)
@@ -465,7 +407,7 @@ class OperacaoLogistica(QDialog):
             else:
                 i.setBackground( QColor('#ffffff') )
             w.addItem(i)
-            itemclicked = w.itemClicked.connect(lambda item: self.simaficSelecionado(item))
+            itemclicked = w.itemDoubleClicked.connect(lambda item: self.simaficSelecionado(item))
 
         #Layout Vertical
         layout = QGridLayout()
@@ -494,7 +436,7 @@ class ItemScanner(QDialog):
     def __init__(self, value, parent=None):
         super().__init__(parent)
         self.setWindowTitle('Scanner')
-        self.setMinimumSize(QSize(640, 480))
+        self.setMinimumSize(QSize(h_size, v_size))
         self.setWindowIcon(self.style().standardIcon(QStyle.SP_FileDialogInfoView))
 
         label1 = QLabel(value)
@@ -539,3 +481,40 @@ if __name__ == '__main__':
     #gallery.show()
     #gallery.showMaximized()
     sys.exit(app.exec_())
+
+
+
+
+   ''' def createBottomRightGroupBox(self):
+        self.bottomRightGroupBox = QGroupBox("Group 3")
+        self.bottomRightGroupBox.setCheckable(True)
+        self.bottomRightGroupBox.setChecked(True)
+
+        lineEdit = QLineEdit('s3cRe7')
+        lineEdit.setEchoMode(QLineEdit.Password)
+
+        spinBox = QSpinBox(self.bottomRightGroupBox)
+        spinBox.setValue(50)
+
+        dateTimeEdit = QDateTimeEdit(self.bottomRightGroupBox)
+        dateTimeEdit.setDateTime(QDateTime.currentDateTime())
+
+        slider = QSlider(Qt.Horizontal, self.bottomRightGroupBox)
+        slider.setValue(40)
+
+        scrollBar = QScrollBar(Qt.Horizontal, self.bottomRightGroupBox)
+        scrollBar.setValue(60)
+
+        dial = QDial(self.bottomRightGroupBox)
+        dial.setValue(30)
+        dial.setNotchesVisible(True)
+
+        layout = QGridLayout()
+        layout.addWidget(lineEdit, 0, 0, 1, 2)
+        layout.addWidget(spinBox, 1, 0, 1, 2)
+        layout.addWidget(dateTimeEdit, 2, 0, 1, 2)
+        layout.addWidget(slider, 3, 0)
+        layout.addWidget(scrollBar, 4, 0)
+        layout.addWidget(dial, 3, 1, 2, 1)
+        layout.setRowStretch(5, 1)
+        self.bottomRightGroupBox.setLayout(layout)'''

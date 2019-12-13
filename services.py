@@ -3,11 +3,31 @@ import random as rnd
 import pandas as pd
 import classes.pedidodao as pdao
 from classes.dfmodel import DataFrameModel as PandasModel
+from exceptions import ValidationError
 import json
 from pandas import ExcelWriter
 from pandas import ExcelFile
 from property_reader import getConfig
+import re
 
+def validateCadastro(pedido, n_simafic, qtd_items):
+    print("validando campos...")
+    pattern = re.compile('[0-9]{2}\.[0-9]{2}\.[0-9]{2}\.[0-9]{3}-[0-9]{1}')
+    success = True
+    error="Dados Incorretos!"
+    if not(len(pedido) < 10 and pedido.isdigit()):
+        success=False
+        raise ValidationError("O pedido só pode conter números!", error)
+        pass;
+    if not(pattern.match(n_simafic)):
+        raise ValidationError("Código SIMAFIC está errado!", error)
+        success=False
+        pass;
+    if not(len(qtd_items) < 10 and qtd_items.isdigit()):
+        raise ValidationError("A quantidade só pode conter números!", error)
+        success=False
+        pass;
+    return success
 
 def comparator():
 
@@ -59,13 +79,13 @@ def loadValidXLS():
     resultdf.reindex(index=range(1,len(resultList)))
     return pd.DataFrame.from_dict(resultList)
 
-def add_pedido(id_pedido):
+def add_pedido(pedido, n_simafic, qtd_items):
     print('Add Pedido')
-    result = pdao.dinamicQuery(id_pedido)
-    if result:
-        print ('Pedido encontrato')
-    else:
-        print ('Not today')
+    desc = df.loc[df['CODIGO'] == n_simafic, 'DESCRICAO']
+    pedidoModel = pdao.Pedido(pedido, n_simafic, desc, qtd_items, 0)
+    print(pedidoModel)
+    pdao.inserirPedido(pedidoModel)
+ 
 
 
 def get_all_pedidos():
@@ -93,3 +113,4 @@ else:
     valoresPermitidos = json.loads(getConfig('filtros', 'tamanhos'))
 
     #comparator()
+        
