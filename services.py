@@ -110,6 +110,10 @@ def add_pedido(pedido, n_simafic, qtd_items):
 def update_pedido(pedido):
     pdao.update_pedido(pedido)
 
+def update_cancelar_scan(pedido):
+    pedido.qty_scanneada=0
+    pdao.update_pedido(pedido)
+
 def get_all_pedidos_pandas():
     arr = pdao.queryAllPedidos()
     print(arr)

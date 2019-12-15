@@ -4,11 +4,14 @@
 """Exemplo de CRUD com SQLAlchemy e SQLite3"""
 
 from sqlalchemy.sql import func
-from sqlalchemy import Column, Integer, String, create_engine
+from sqlalchemy import Column, Integer, String, create_engine, DateTime, event, DDL, Table, MetaData
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
-from sqlalchemy import DateTime
+from sqlalchemy.schema import Sequence
+
 from datetime import datetime, timedelta
+
+
 # Criar banco na memória
 # engine = create_engine('sqlite://')
 
@@ -25,15 +28,17 @@ Session = sessionmaker(bind=engine)
 Base = declarative_base()
 
 
+
 class Pedido(Base):
     """Cada classe representa uma tabela do banco"""
     # Nome da tabela, se a variável não for
     # declarada será utilizado o nome da classe.
     __tablename__ = 'Pedido'
+    __table_args__ = {'sqlite_autoincrement': True}
 
-    id = Column(Integer, primary_key=True, nullable=False)
-    id_pedido = Column(String(80), unique=False, nullable=False)
-    cod_simafic = Column(String(80), unique=False, nullable=False)
+    id=Column('id', Integer)
+    id_pedido = Column(String(80), unique=False, nullable=False, primary_key=True)
+    cod_simafic = Column(String(80), unique=False, nullable=False, primary_key=True)
     desc = Column(String(200), unique=False, nullable=False)
     qty_scanneada = Column(Integer, unique=False, nullable=False)
     qty_total = Column(Integer, unique=False, nullable=False)
@@ -128,6 +133,7 @@ if __name__ == "__main__":
 else :
 
     def inserirPedido(pedido):
+        pedido.id = id(pedido)
         session = Session()
         session.add(pedido)
         session.commit()
@@ -141,11 +147,11 @@ else :
         return dados
 
     def update_pedido(pedido):
-        session = Session()
-        session.query(Pedido).filter(Pedido.id_pedido == pedido.id_pedido).update({'qty_scanneada': int(pedido.qty_scanneada)})
+        session = Session() 
+        session.query(Pedido).filter_by(id_pedido=pedido.id_pedido).filter_by(cod_simafic=pedido.cod_simafic).update({column: getattr(pedido, column) for column in Pedido.__table__.columns.keys()})
         session.commit()
-        session.query(Pedido).filter(Pedido.id_pedido == pedido.id_pedido).one().id_pedido    
-
+        #session.query(Pedido).filter(Pedido.id_pedido == pedido.id_pedido).one().id_pedido
+            
     def dinamicQuery(id_pedido):
         session = Session()
         print (str(id_pedido))

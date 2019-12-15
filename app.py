@@ -1,10 +1,11 @@
 import fix_qt_import_error
 from exceptions import ValidationError
 from services import (get_simafic_as_dataframe, get_main_icon, get_h_size, get_v_size, get_all_pedidos_pandas, add_pedido,validateCadastro,
-validateInfoScan,ValidationError, get_all_pedidos, get_all_pedidos_df, valida_simafic, update_pedido, validaQtdPedido)
+validateInfoScan,ValidationError, get_all_pedidos, get_all_pedidos_df, valida_simafic, update_pedido, validaQtdPedido, update_cancelar_scan)
 from assets.style import getStyle
 from PyQt5.QtCore import QDateTime, Qt, QTimer, QSize, QSortFilterProxyModel, pyqtSlot
 from PyQt5 import QtGui
+from PyQt5.QtMultimedia import QSound
 from PyQt5.QtGui import QColor, QFont, QIcon, QPixmap
 from PyQt5.QtWidgets import (QApplication, QCheckBox, QComboBox, QDateTimeEdit, 
                              QDial, QDialog,QMainWindow, QGridLayout, QGroupBox, QHBoxLayout, QLabel, QLineEdit,
@@ -63,7 +64,7 @@ class CadastroPedidos(QDialog):
         #mainLayout.addWidget(self.submitButtons, 3, 0, 1, 2)
         mainLayout.setRowStretch(1, 1)
         mainLayout.setColumnStretch(0, 1)
-        mainLayout.setColumnStretch(1, 1)
+        mainLayout.setColumnStretch(1, 3)
 
         self.setLayout(mainLayout)
    
@@ -198,6 +199,9 @@ class CadastroPedidos(QDialog):
         tab1ListaPedidos.setLayout(layout)
       
 
+        #TODO: Agrupar items por pedido (Drop Down) | Auto-resize nas cells da TView
+        #TODO: Adicionar método de remoção de Item
+
         self.topRightGroupBox.addTab(tab1ListaPedidos, "&Lista de Pedidos: ")
         self.topRightGroupBox.addTab(tabItensValidos, "&Lista de Itens:")
 
@@ -273,6 +277,8 @@ class MainWindow(QMainWindow):
         self.setWindowTitle("Inove")
         self.setStyleSheet(style)
         self.InitUI()
+        errorSound = QSound('assets/error.wav')
+        errorSound.play()
 
     def InitUI(self):
         self.setWindowTitle(self.title)
@@ -364,18 +370,19 @@ class MainWindow(QMainWindow):
     def cadastrarPedido(self):
         self.statusBar().showMessage("Switched to CadastroPedidos")
         self.cams = CadastroPedidos() 
-        self.cams.show()
+        self.cams.showMaximized()
         self.close()
 
     @pyqtSlot()
     def operacaoLogistica(self):
         self.statusBar().showMessage("Switched to OperacaoLogistica")
         self.cams = OperacaoLogistica() 
-        self.cams.show()
+        self.cams.showMaximized()
         self.close()
         
 
 class OperacaoLogistica(QDialog):
+    #TODO: Acertar formatação na listagem de items por SIMAFIC 
     def __init__(self, parent=None):
         super().__init__(parent)
         self.setWindowTitle('Operação Logística')
@@ -385,15 +392,10 @@ class OperacaoLogistica(QDialog):
         verticalSpacer = QSpacerItem(40, 20, QSizePolicy.Minimum, QSizePolicy.Expanding)
 
 
+        #TODO: 
         #Pedido Input Field
         self.numero_pedido = QLineEdit(self)
         self.numero_pedido.setPlaceholderText("Insira o Número do Pedido")
-
-
-        #Procurar Pedido Btn
-        '''self.procurar_pedido_btn = QPushButton("Procurar Pedido")
-        self.procurar_pedido_btn.setIconSize(QSize(200, 200))
-        self.procurar_pedido_btn.clicked.connect(self.goScan)'''
 
         #Voltar Btn
         self.voltar_btn = QPushButton(self)
@@ -402,17 +404,6 @@ class OperacaoLogistica(QDialog):
         self.voltar_btn.clicked.connect(self.goMainWindow)
         self.close()
 
-        '''#Layout Vertical
-        layoutV = QHBoxLayout()
-        layoutH = QHBoxLayout()
-        layoutH.addWidget(self.numero_pedido)
-        layoutH.addWidget(self.procurar_pedido_btn)
-        layoutH.addWidget(self.voltar_btn)
-        layoutV.addLayout(layoutH)
-        layoutV.addItem(verticalSpacer)
-        self.setLayout(layoutV)'''
-
-
         #Adicionar Cores no StyleSheet
         colors = ['##393318', '  ##fff']
         self.pedidos = get_all_pedidos()
@@ -420,17 +411,32 @@ class OperacaoLogistica(QDialog):
         self.simafics_do_id = QListWidget()
         #self.simafics_do_id.setHidden(True)
         self.createPedidoIdList()
-        self.id_pedido_list.itemClicked.connect(lambda id_pedido: self.listaSimafics(id_pedido))
+        self.id_pedido_list.itemClicked.connect(lambda id_pedido: self.createListaSimafics(id_pedido))
         self.simafics_do_id.itemDoubleClicked.connect(lambda pedido: self.simaficSelecionado(pedido))
 
+        self.pedidos_label = QLabel()
+        self.pedidos_label.setBuddy(self.id_pedido_list)
+        self.simafic_label = QLabel()
+        self.simafic_label.setBuddy(self.simafics_do_id)
+
+        if len(self.pedidos) <= 0:
+            self.pedidos_label.setText("É necessário adicionar um pedido na tela de cadastro.")
+            self.pedidos_label.setStyleSheet("QLabel { color: red; }");
+        else:
+            self.pedidos_label.setText("Listagem de Pedidos:")
+            self.pedidos_label.setStyleSheet("QLabel { color: black; }");
+            self.simafic_label.setText("Selecione um pedido para ver a listagem de Itens por SIMAFIC:")
+            self.simafic_label.setStyleSheet("QLabel { color: red; }");
 
         layout = QGridLayout()
         layout.setColumnStretch(0, 1)
-        layout.setColumnStretch(1, 1)
+        layout.setColumnStretch(1, 4)
         layout.addWidget(self.numero_pedido,0,0)
         layout.addWidget(self.voltar_btn,0,1)
-        layout.addWidget(self.id_pedido_list,1,0)
-        layout.addWidget(self.simafics_do_id, 1,1)
+        layout.addWidget(self.pedidos_label, 1,0)
+        layout.addWidget(self.simafic_label, 1, 1)
+        layout.addWidget(self.id_pedido_list,2,0)
+        layout.addWidget(self.simafics_do_id, 2,1)
         self.setLayout(layout)
 
 
@@ -453,12 +459,12 @@ class OperacaoLogistica(QDialog):
             self.id_pedido_list.addItem(i)
        
 
-    def listaSimafics(self, id_pedido):
+    def createListaSimafics(self, id_pedido):
         print('def listaSimafics(self, id_pedido): {id_pedido}'.format(id_pedido=id_pedido.text()))
         item_result = [x for x in self.pedidos if x.id_pedido == id_pedido.text()]
         self.simafics_do_id.clear()
         for idx, item in enumerate(item_result):
-            i = QListWidgetItem('{}'.format(str(item.cod_simafic)))
+            i = QListWidgetItem('{}'.format(str(item.asdict())))
             i.setData(Qt.UserRole, item)
             if item.qty_total is item.qty_scanneada:
                 i.setBackground( QColor('#5eba7d'))
@@ -467,14 +473,18 @@ class OperacaoLogistica(QDialog):
                     i.setBackground( QColor('#c8ccd0') )
                 else:
                     i.setBackground( QColor('#ffffff') )
-            self.simafics_do_id.addItem(i)        
+            self.simafics_do_id.addItem(i)
+        self.simafic_label.setText("Listagem de Itens por SIMAFIC:")
+        self.simafic_label.setStyleSheet("QLabel { color: black; }");
+
+        
         #self.simafics_do_id.setHidden(False)
         
 
     def simaficSelecionado(self, value):
         print (value.text())
         self.cams = ItemScanner(value)
-        self.cams.show()
+        self.cams.showMaximized()
         self.close()
 
     def goMainWindow(self):
@@ -484,7 +494,7 @@ class OperacaoLogistica(QDialog):
 
     def goScan(self):
         self.cams = ItemScanner("Eu sou o Pedido", "Eu sou o Simafic", "Eu sou a Descrição", "300")
-        self.cams.show()
+        self.cams.showMaximized()
         self.close()
 
 
@@ -667,18 +677,28 @@ class ItemScanner(QDialog):
        
         
     def cancelarScan(self):
-        print("Cancelar Scan")
-
+        buttonReply = QMessageBox.question(self, 'Cancelamento de Contagem', "Deseja cancelar a contagem? Os itens contados serão desconsiderados.", QMessageBox.Yes | QMessageBox.No, QMessageBox.No)
+        if buttonReply == QMessageBox.Yes:
+            print('Cancelamento de pedido aprovado por {}.'.format(self.count_resp_le.text()))
+            update_cancelar_scan(self.pedido)
+            self.goOperacoesLogisticas()
+        else:
+           pass;
+        
     def validaScanInput(self):
         print('validaScanInput {}'.format(self.input_scanner.text()))
         try:
             if valida_simafic(s_input=self.input_scanner.text(), pedido=self.pedido):
                 self.pedido.qty_scanneada += 1
                 self.qtd_parcial_le.setText(str(self.pedido.qty_scanneada))
+                self.pedido.nome_responsavel = self.count_resp_le.text()
+                self.pedido.id_caixa = self.id_caixa_le.text()
                 update_pedido(self.pedido)
                 self.input_scanner.clear()
         except (ValidationError) as error:
             error_dialog = QErrorMessage()
+            errorSound = QSound('assets/error.wav')
+            errorSound.play()
             error_dialog.setWindowTitle(error.errors)
             error_dialog.setWindowIcon(QIcon(main_icon))
             error_dialog.showMessage(error.message)
@@ -689,7 +709,7 @@ class ItemScanner(QDialog):
 
     def goOperacoesLogisticas(self):
         self.cams = OperacaoLogistica()
-        self.cams.show()
+        self.cams.showMaximized()
         self.close()
 
     def goMainWindow(self):
