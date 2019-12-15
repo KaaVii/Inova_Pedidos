@@ -18,15 +18,15 @@ def validateCadastro(pedido, n_simafic, qtd_items):
     if not(len(pedido) < 10 and pedido.isdigit()):
         success=False
         raise ValidationError("O pedido só pode conter números e no máximo 10 digitos!", error)
-        pass;
+        pass
     if not(patternSimafic.match(n_simafic)):
         raise ValidationError("Código SIMAFIC está fora do padrão!", error)
         success=False
-        pass;
+        pass
     if not(len(qtd_items) < 10 and qtd_items.isdigit()):
         raise ValidationError("A quantidade só pode conter números e no máximo 10 digitos!", error)
         success=False
-        pass;
+        pass
     return success
 
 def validateInfoScan(responsavel, caixa):
@@ -35,11 +35,11 @@ def validateInfoScan(responsavel, caixa):
     if not(responsavel):
         raise ValidationError("O Campo [Responsável pela contagem] deve ser preenchido.", error)
         success=False
-        pass;
+        pass
     if not caixa:
         success=False
         raise ValidationError("O Campo [Numero da Caixa] deve ser preenchido.", error)
-        pass;
+        pass
     return success
 
 def comparator():
@@ -112,6 +112,15 @@ def get_all_pedidos_pandas():
 def get_all_pedidos():
     arr=pdao.queryAllPedidos()
     return arr
+
+def get_all_pedidos_df():
+    arr = pdao.queryAllPedidos()
+    print(arr)
+    df = pd.DataFrame.from_records(s.asdict() for s in arr)
+    return df
+
+def get_all_items_do_pedido():
+    pass
 
 def get_main_icon():
     return getConfig('inove', 'icon')

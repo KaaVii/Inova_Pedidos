@@ -1,7 +1,7 @@
 import fix_qt_import_error
 from exceptions import ValidationError
 from services import (get_simafic_as_dataframe, get_main_icon, get_h_size, get_v_size, get_all_pedidos_pandas, add_pedido,validateCadastro,
-validateInfoScan,ValidationError, get_all_pedidos)
+validateInfoScan,ValidationError, get_all_pedidos, get_all_pedidos_df)
 from assets.style import getStyle
 from PyQt5.QtCore import QDateTime, Qt, QTimer, QSize, QSortFilterProxyModel, pyqtSlot
 from PyQt5 import QtGui
@@ -228,11 +228,12 @@ class CadastroPedidos(QDialog):
                 mb.setText('O pedido: {} foi criado com sucesso!'.format(pedido))
                 mb.exec_()
                 add_pedido(pedido, n_simafic, qtd_items)
+                self.update_model_tableview()
                 self.limpar_pedidos()
                 
 
         except ValidationError as error:
-            error_dialog = QErrorMessage()
+            error_dialog = QErrorMessage()  
             error_dialog.setWindowTitle(error.errors)
             error_dialog.setWindowIcon(QIcon(main_icon))
             error_dialog.showMessage(error.message)
@@ -241,9 +242,9 @@ class CadastroPedidos(QDialog):
         pass
         #add_pedido(pedido)
     
-    
-
-
+    def update_model_tableview(self):
+        self.modelAllPedidos.setDataFrame(get_all_pedidos_df())
+        self.topRightGroupBox.setCurrentIndex(0)
 
     def limpar_pedidos(self):
         self.n_simafic.clear()
