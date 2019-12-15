@@ -29,32 +29,39 @@ def validateCadastro(pedido, n_simafic, qtd_items):
         pass
     return success
 
-def validateInfoScan(responsavel, caixa):
+def validateInfoScan(responsavel, caixa,pedido):
     success = True
     error="Dados Incorretos!"
     if not(responsavel):
-        raise ValidationError("O Campo [Responsável pela contagem] deve ser preenchido.", error)
         success=False
-        pass
+        raise ValidationError("O Campo [Responsável pela contagem] deve ser preenchido.", error)
     if not caixa:
         success=False
         raise ValidationError("O Campo [Numero da Caixa] deve ser preenchido.", error)
-        pass
     return success
 
-def comparator():
+def valida_simafic(s_input, pedido):
+    success = True
+    error = "Simafic Incorreto!"
+    if not(patternSimafic.match(s_input)):
+        success=False
+        raise ValidationError("Código SIMAFIC está fora do padrão!", error)
+    if (pedido.qty_scanneada >= pedido.qty_total):
+        success=False
+        raise ValidationError("O Pedido já atingiu a quantidade", error)
+    if (s_input != pedido.cod_simafic):
+        success=False
+        raise ValidationError("O Código está errado, verifique o produto.", error)
+    if (s_input is pedido.cod_simafic):        
+        success = True
+    return success
 
-    pedido = '123'
-    produto = '08.04.02.499-9'
-    npedido = 10
-    
-    result = validaItem(produto)
-
-    pedido = pdao.Pedido(id_pedido=pedido, id_product=result.get('CODIGO'), desc=result.get('DESCRICAO'), qty_total=int(npedido), qty_scanneada=0)
-    pdao.inserirPedido(pedido)
-    pedidoselecionado = pdao.queryAllPedidos()
-    print (pedidoselecionado)
-    # print (result)
+def validaQtdPedido(pedido):
+    success = True
+    if (pedido.qty_scanneada >= pedido.qty_total):
+        success=False
+    print('validaQtdPedido | {}'.format(str(success)))
+    return success
 
 def validaItem(produto):
     roupa_dict = df.T.to_dict().values()
@@ -100,7 +107,8 @@ def add_pedido(pedido, n_simafic, qtd_items):
     print('pedidoModel como Dict:' ,pedidoModel)
     pdao.inserirPedido(pedidoModel)
  
-
+def update_pedido(pedido):
+    pdao.update_pedido(pedido)
 
 def get_all_pedidos_pandas():
     arr = pdao.queryAllPedidos()
@@ -136,7 +144,7 @@ if __name__ == "__main__":
     valoresPermitidos = json.loads(getConfig('filtros', 'tamanhos'))
     print(loadValidXLS())
     #get_simafic_as_dataframe()
-    comparator()
+
 else:
     df = pd.read_excel('plan_test.xlsx', index_col=None, header=0)
     valoresPermitidos = json.loads(getConfig('filtros', 'tamanhos'))

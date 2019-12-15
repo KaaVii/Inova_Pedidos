@@ -8,7 +8,7 @@ from sqlalchemy import Column, Integer, String, create_engine
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy import DateTime
-from datetime import timedelta
+from datetime import datetime, timedelta
 # Criar banco na memória
 # engine = create_engine('sqlite://')
 
@@ -39,9 +39,9 @@ class Pedido(Base):
     qty_total = Column(Integer, unique=False, nullable=False)
     nome_responsavel = Column(String(120), unique=False, nullable=False)
     id_caixa = Column(String(80), unique=False, nullable=False)
-    data_criacao = Column(DateTime(timezone=timedelta(-3)), server_default=func.now())
-    time_updated = Column(DateTime(timezone=timedelta(-3)), onupdate=func.now())
-
+    data_criacao = Column(DateTime, default=datetime.now)
+    #time_updated = Column(DateTime(timezone=True), onupdate=(func.now()-timedelta(hours=-3)))
+    time_updated = Column(DateTime, onupdate=datetime.now)
     def __init__(self, id_pedido, cod_simafic, desc, qty_total, qty_scanneada, nome_responsavel, id_caixa):
        
         self.id_pedido = int(id_pedido)
@@ -139,6 +139,12 @@ else :
         print(dados)
         session.close()
         return dados
+
+    def update_pedido(pedido):
+        session = Session()
+        session.query(Pedido).filter(Pedido.id_pedido == pedido.id_pedido).update({'qty_scanneada': int(pedido.qty_scanneada)})
+        session.commit()
+        session.query(Pedido).filter(Pedido.id_pedido == pedido.id_pedido).one().id_pedido    
 
     def dinamicQuery(id_pedido):
         session = Session()
