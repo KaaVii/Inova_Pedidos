@@ -21,4 +21,8 @@ def getStyle():
             QPushButton#Yellow{
                 color:#b18400;
             }
+
+            QLabel#ScanTitle{
+                 text-align:center
+            }
             """

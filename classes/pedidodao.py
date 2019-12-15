@@ -3,12 +3,12 @@
 # -*- coding: utf-8 -*-
 """Exemplo de CRUD com SQLAlchemy e SQLite3"""
 
-import datetime
+from sqlalchemy.sql import func
 from sqlalchemy import Column, Integer, String, create_engine
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
-
-
+from sqlalchemy import DateTime
+from datetime import timedelta
 # Criar banco na memória
 # engine = create_engine('sqlite://')
 
@@ -33,24 +33,24 @@ class Pedido(Base):
 
     id = Column(Integer, primary_key=True, nullable=False)
     id_pedido = Column(String(80), unique=False, nullable=False)
-    id_product = Column(String(80), unique=False, nullable=False)
-    desc = Column(String(80), unique=False, nullable=False)
+    cod_simafic = Column(String(80), unique=False, nullable=False)
+    desc = Column(String(200), unique=False, nullable=False)
+    qty_scanneada = Column(Integer, unique=False, nullable=False)
     qty_total = Column(Integer, unique=False, nullable=False)
-    qty_total = Column(Integer, unique=False, nullable=False)
+    nome_responsavel = Column(String(120), unique=False, nullable=False)
+    id_caixa = Column(String(80), unique=False, nullable=False)
+    data_criacao = Column(DateTime(timezone=timedelta(-3)), server_default=func.now())
+    time_updated = Column(DateTime(timezone=timedelta(-3)), onupdate=func.now())
 
-    def __init__(self, id_pedido, id_product, desc, qty_total, qty_scanneada):
-        """Construtor.
-        Utilizando o construtor para passar os valores
-        no momento em que a classe é instanciada.
-        :param nome: (str).
-        :param idade: (int).
-        :param sexo: (str).
-        """
+    def __init__(self, id_pedido, cod_simafic, desc, qty_total, qty_scanneada, nome_responsavel, id_caixa):
+       
         self.id_pedido = int(id_pedido)
-        self.id_product = str(id_product)
+        self.cod_simafic = str(cod_simafic)
         self.desc = str(desc)
         self.qty_total = int(qty_total)
         self.qty_scanneada = int(qty_scanneada)
+        self.nome_responsavel = str(nome_responsavel)
+        self.id_caixa = str(id_caixa)
 
     def __repr__(self):
         return "<{klass} @{id:x} {attrs}>".format(
@@ -60,7 +60,12 @@ class Pedido(Base):
             )
             
     def asdict(self):
-        return {'Pedido': self.id_pedido, 'Produto': self.id_product, 'desc': self.desc}
+        return ({'Pedido': self.id_pedido, 'COD. SIMAFIC': self.cod_simafic, 
+        'Descrição': self.desc, 'Qtd. Total': self.qty_total, 
+        'Qtd. Scanneada': self.qty_scanneada, 'Nº da Caixa':self.id_caixa, 
+        'Responsável': self.nome_responsavel,'Data Criação': self.data_criacao,
+        'Data Atualização':self.time_updated})
+
 
 if __name__ == "__main__":
     # Removendo todas as tabelas do banco.
@@ -131,6 +136,7 @@ else :
     def queryAllPedidos():
         session = Session()
         dados = session.query(Pedido).all()
+        print(dados)
         session.close()
         return dados
 

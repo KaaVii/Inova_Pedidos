@@ -1,13 +1,14 @@
 import fix_qt_import_error
 from exceptions import ValidationError
-from services import (get_simafic_as_dataframe, get_main_icon, get_h_size, get_v_size, get_all_pedidos, add_pedido,validateCadastro,ValidationError)
+from services import (get_simafic_as_dataframe, get_main_icon, get_h_size, get_v_size, get_all_pedidos_pandas, add_pedido,validateCadastro,
+validateInfoScan,ValidationError, get_all_pedidos)
 from assets.style import getStyle
 from PyQt5.QtCore import QDateTime, Qt, QTimer, QSize, QSortFilterProxyModel, pyqtSlot
 from PyQt5 import QtGui
-from PyQt5.QtGui import QColor, QFont, QIcon
+from PyQt5.QtGui import QColor, QFont, QIcon, QPixmap
 from PyQt5.QtWidgets import (QApplication, QCheckBox, QComboBox, QDateTimeEdit,
                              QDial, QDialog,QMainWindow, QGridLayout, QGroupBox, QHBoxLayout, QLabel, QLineEdit,
-                             QProgressBar, QPushButton, QRadioButton, QScrollBar, QSizePolicy,
+                             QProgressBar, QPushButton, QRadioButton, QScrollBar, QSizePolicy,QMessageBox,
                              QSlider, QSpinBox, QStyleFactory, QTableWidget, QTabWidget, QTextEdit, QFormLayout,
                              QVBoxLayout, QWidget, QErrorMessage, QTableView, QSpacerItem, QListWidget, QListWidgetItem, QStyle)
 
@@ -78,27 +79,24 @@ class CadastroPedidos(QDialog):
 
         self.n_simafic = QLineEdit(self)
         self.n_simafic.setPlaceholderText("ex: 08.04.02.507-6")
-        n_simafic_label = QLabel("Numero SIMAFIC:")
+        n_simafic_label = QLabel("COD. SIMAFIC:")
 
         self.qtd_items = QLineEdit(self)
         self.qtd_items.setPlaceholderText("ex: 100")
         qtd_items_label = QLabel("Quantidade de Items:")
 
         '''ADD PEDIDO'''
-        add_item = QPushButton('Adicionar Item', self)
+        add_item = QPushButton('Adicionar Item')
         add_item.setObjectName('Add')
         add_item.setIcon(QIcon('assets/check_icon_blue2.png'))
         add_item.clicked.connect(self.add_items)
 
         '''CLEAR BUTTON CONFIG '''
-        clear_btn = QPushButton('Limpar Campos', self)
+        clear_btn = QPushButton('Limpar Campos')
         clear_btn.setObjectName('Yellow')
         clear_btn.setIcon(QIcon('assets/eraser.png'))
-        clear_btn.clicked.connect(self.pedido.clear)
-        clear_btn.clicked.connect(self.n_simafic.clear)
-        clear_btn.clicked.connect(self.qtd_items.clear)
-
-        
+        clear_btn.clicked.connect(self.limpar_pedidos)
+                
         formLayout.addRow(pedido_label, self.pedido)
         formLayout.addRow(n_simafic_label, self.n_simafic)
         formLayout.addRow(qtd_items_label, self.qtd_items)
@@ -131,7 +129,7 @@ class CadastroPedidos(QDialog):
 
          #[First Tab] Create first tab
         verticalSpacer = QSpacerItem(40, 20, QSizePolicy.Minimum, QSizePolicy.Expanding)
-        tab1ListaItens = QWidget()
+        tab1ListaPedidos = QWidget()
         layout = QVBoxLayout(self)
 
         #[First Tab] - TextFields
@@ -142,43 +140,39 @@ class CadastroPedidos(QDialog):
 
 
         #[First Tab] - Set TableView
-        table2Widget = QTableView()
+        tabv_pedidos = QTableView()
         tab2hbox = QHBoxLayout()
-        modelAllPedidos = get_all_pedidos()
-
+        self.modelAllPedidos = get_all_pedidos_pandas()
 
         #[First Tab] - Set Filters
-        proxyPedidoFilter = QSortFilterProxyModel()
-        proxyPedidoFilter.setSourceModel(modelAllPedidos)
-        proxyPedidoFilter.setFilterKeyColumn(0)
-        proxyPedidoFilter.setSortCaseSensitivity(Qt.CaseSensitive)
-        proxyProdutoFilter = QSortFilterProxyModel()
-        proxyProdutoFilter.setSourceModel(proxyPedidoFilter)
-        proxyProdutoFilter.setFilterKeyColumn(1)
-        proxyProdutoFilter.setSortCaseSensitivity(Qt.CaseSensitive)
-
+        self.proxyPedidoFilter = QSortFilterProxyModel()
+        self.proxyPedidoFilter.setSourceModel(self.modelAllPedidos)
+        self.proxyPedidoFilter.setFilterKeyColumn(0)
+        self.proxyPedidoFilter.setSortCaseSensitivity(Qt.CaseSensitive)
+        self.proxyPedidoFilterSecondLayer = QSortFilterProxyModel()
+        self.proxyPedidoFilterSecondLayer.setSourceModel(self.proxyPedidoFilter)
+        self.proxyPedidoFilterSecondLayer.setFilterKeyColumn(1)
+        self.proxyPedidoFilterSecondLayer.setSortCaseSensitivity(Qt.CaseSensitive)
+        
         
        
-        table2Widget.resizeColumnsToContents()
-        table2Widget.setColumnWidth(2, 100)
-        tab2hbox.addWidget(table2Widget)
+        tabv_pedidos.resizeColumnsToContents()
+        tabv_pedidos.setColumnWidth(2, 100)
+        tabv_pedidos.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
+        tab2hbox.addWidget(tabv_pedidos)
 
 
         #[Connect Fields]
-        searchProduto.textChanged.connect(lambda wildcard: proxyProdutoFilter.setFilterWildcard(wildcard))
-        searchPedido.textChanged.connect(lambda wildcard: proxyPedidoFilter.setFilterWildcard(wildcard))
-        table2Widget.setModel(proxyProdutoFilter)
+        searchProduto.textChanged.connect(lambda wildcard: self.proxyPedidoFilterSecondLayer.setFilterWildcard(wildcard))
+        searchPedido.textChanged.connect(lambda wildcard: self.proxyPedidoFilter.setFilterWildcard(wildcard))
+        tabv_pedidos.setModel(self.proxyPedidoFilterSecondLayer)
+        tabv_pedidos.resizeColumnsToContents
+        tabv_pedidos.resizeRowsToContents
+         
 
         
         #[First Tab] - Set Layout
-        layoutText = QHBoxLayout()
-        layoutText.addWidget(searchPedido)
-        layoutText.addWidget(searchProduto)
         
-        layout.addLayout(layoutText)
-        layout.addWidget(table2Widget)
-        layout.addItem(verticalSpacer)
-        tab1ListaItens.setLayout(layout)
 
       
         tabItensValidos = QWidget()
@@ -195,8 +189,17 @@ class CadastroPedidos(QDialog):
         
         tabItensValidos.setLayout(tab1hbox)
 
-        self.topRightGroupBox.addTab(tab1ListaItens, "&Lista de Pedidos: ")
-        self.topRightGroupBox.addTab(tabItensValidos, "Itens de Itens:")
+        layoutText = QHBoxLayout()
+        layoutText.addWidget(searchPedido)
+        layoutText.addWidget(searchProduto)
+        
+        layout.addLayout(layoutText)
+        layout.addWidget(tabv_pedidos)
+        tab1ListaPedidos.setLayout(layout)
+      
+
+        self.topRightGroupBox.addTab(tab1ListaPedidos, "&Lista de Pedidos: ")
+        self.topRightGroupBox.addTab(tabItensValidos, "&Lista de Itens:")
 
     def resumoDosItens(self):
         self.bottomLeftGroupBox = QGroupBox("Lista de Itens do Pedido nº")
@@ -218,9 +221,16 @@ class CadastroPedidos(QDialog):
         try:
             pedido, n_simafic, qtd_items = self.pedido.text(), self.n_simafic.text(), self.qtd_items.text()
             if validateCadastro(self.pedido.text(), self.n_simafic.text(), self.qtd_items.text()):
-                print ("Validação concluída...")
-                print ("Add Pedido: {} {} {}".format(self.pedido.text(), self.n_simafic.text(), self.qtd_items.text()))
+                print ("Add Pedido: {} {} {}".format(pedido, n_simafic, qtd_items))
+                mb = QMessageBox()
+                mb.setIconPixmap(QPixmap('assets/check_icon_blue2'))
+                mb.setWindowTitle("Sucesso")
+                mb.setText('O pedido: {} foi criado com sucesso!'.format(pedido))
+                mb.exec_()
                 add_pedido(pedido, n_simafic, qtd_items)
+                self.limpar_pedidos()
+                
+
         except ValidationError as error:
             error_dialog = QErrorMessage()
             error_dialog.setWindowTitle(error.errors)
@@ -230,6 +240,15 @@ class CadastroPedidos(QDialog):
         
         pass
         #add_pedido(pedido)
+    
+    
+
+
+
+    def limpar_pedidos(self):
+        self.n_simafic.clear()
+        self.qtd_items.clear()
+        self.pedido.clear()
 
     def removerItens(self):
         listItems=self.listaViewItens.selectedItems()
@@ -290,13 +309,13 @@ class MainWindow(QMainWindow):
         font.setPointSize(20)
 
         #layout = QHBoxLayout()
-        cadastrarNovoPedidoBtn = QPushButton('Cadastrar Novo Pedido', self)
+        cadastrarNovoPedidoBtn = QPushButton('Cadastrar Novo Pedido')
         cadastrarNovoPedidoBtn.setObjectName('Blue')
         cadastrarNovoPedidoBtn.setFont(font)
         cadastrarNovoPedidoBtn.setIcon(QIcon('assets/cadastro_blue.png'))
         cadastrarNovoPedidoBtn.setIconSize(QSize(40, 40))
         cadastrarNovoPedidoBtn.clicked.connect(self.cadastrarPedido)
-        efetuarOperacaoLogBtn = QPushButton('Operação Logística', self)
+        efetuarOperacaoLogBtn = QPushButton('Operação Logística')
         efetuarOperacaoLogBtn.setObjectName('Green')
         efetuarOperacaoLogBtn.setFont(font)
         efetuarOperacaoLogBtn.setIcon(QIcon('assets/logistica_green.png'))
@@ -360,7 +379,7 @@ class OperacaoLogistica(QDialog):
         super().__init__(parent)
         self.setWindowTitle('Operação Logística')
         self.setMinimumSize(QSize(h_size, v_size))
-        self.setWindowIcon(QtGui.QIcon(main_icon))
+        self.setWindowIcon(QIcon(main_icon))
 
         verticalSpacer = QSpacerItem(40, 20, QSizePolicy.Minimum, QSizePolicy.Expanding)
 
@@ -371,7 +390,7 @@ class OperacaoLogistica(QDialog):
 
 
         #Procurar Pedido Btn
-        self.procurar_pedido_btn = QPushButton("Procurar Pedido", self)
+        self.procurar_pedido_btn = QPushButton("Procurar Pedido")
         self.procurar_pedido_btn.setIconSize(QSize(200, 200))
         self.procurar_pedido_btn.clicked.connect(self.goScan)
 
@@ -392,34 +411,33 @@ class OperacaoLogistica(QDialog):
         layoutV.addItem(verticalSpacer)
         self.setLayout(layoutV)'''
 
+
+        #Adicionar Cores no StyleSheet
         colors = ['##393318', '  ##fff']
+        pedidos = get_all_pedidos()
 
         w = QListWidget()
-        for n in range(8):
-            i = QListWidgetItem('%s' % n)
-            item = QListWidgetItem()
-            text = "teste{}".format(1)
-            item.setText(text)
-            item.setData(n, text)
-            
-            if( n % 2 ==0):
+        for pedido in pedidos:
+            i = QListWidgetItem('{}'.format(pedido.desc))
+            if( 2 % 2 ==0):
                 i.setBackground( QColor('#c8ccd0') )
             else:
                 i.setBackground( QColor('#ffffff') )
             w.addItem(i)
-            itemclicked = w.itemDoubleClicked.connect(lambda item: self.simaficSelecionado(item))
-
-        #Layout Vertical
+        w.itemDoubleClicked.connect(lambda item: self.simaficSelecionado(item))
+        
         layout = QGridLayout()
         layout.addWidget(self.numero_pedido,0,0)
         layout.addWidget(self.procurar_pedido_btn,0,1)
         layout.addWidget(self.voltar_btn,0,2)
-        layout.addWidget(w)
-        layout.addItem(verticalSpacer)
+        layout.addWidget(w,1,0,1,3)
         self.setLayout(layout)
 
     def simaficSelecionado(self, value):
         print (value.text())
+        self.cams = ItemScanner(value.text(), "Eu sou o Simafic", "Eu sou a Descrição", "300")
+        self.cams.show()
+        self.close()
 
     def goMainWindow(self):
         self.cams = MainWindow()
@@ -427,48 +445,190 @@ class OperacaoLogistica(QDialog):
         self.close()
 
     def goScan(self):
-        self.cams = ItemScanner(self.numero_pedido.text())
+        self.cams = ItemScanner("Eu sou o Pedido", "Eu sou o Simafic", "Eu sou a Descrição", "300")
         self.cams.show()
         self.close()
 
 
 class ItemScanner(QDialog):
-    def __init__(self, value, parent=None):
+    def __init__(self, pedido, simafic, desc, qtd_total, parent=None):
         super().__init__(parent)
+        self.pedido, self.simafic, self.desc, self.qtd_total = pedido, simafic, desc, qtd_total
+        self.font = QFont()
+        self.fontScan = QFont()
+        self.fontScan.setPointSize(14)
+        self.font.setPointSize(16)
+
+        self.setStyleSheet('assets/style.py')
         self.setWindowTitle('Scanner')
+        self.setWindowIcon(QIcon(main_icon))
         self.setMinimumSize(QSize(h_size, v_size))
-        self.setWindowIcon(self.style().standardIcon(QStyle.SP_FileDialogInfoView))
+        label1 = QLabel(pedido)
+        voltar_btn = QPushButton('Voltar')
+        voltar_btn.clicked.connect(self.goOperacoesLogisticas)
 
-        label1 = QLabel(value)
-        self.button = QPushButton()
-        self.button.setSizePolicy(QSizePolicy.Minimum, QSizePolicy.Expanding)
-        self.button.setIcon(self.style().standardIcon(QStyle.SP_ArrowLeft))
-        self.button.setIconSize(QSize(200, 200))
+        titleLabel = QLabel('Pedido Nº {pedido}'.format(pedido=pedido))
+        titleLabel.setFont(self.font)        
+        titleLabel.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
+        titleLabel.setAlignment(Qt.AlignCenter)
+        titleLabel.setObjectName('ScanTitle')
 
-        layoutV = QVBoxLayout()
-        self.pushButton = QPushButton(self)
-        self.pushButton.setStyleSheet('background-color: rgb(0,0,255); color: #fff')
-        self.pushButton.setText(value)
-        self.pushButton.clicked.connect(self.goMainWindow)
-        layoutV.addWidget(self.pushButton)
 
-        layoutH = QHBoxLayout()
-        layoutH.addWidget(label1)
-        layoutH.addWidget(self.button)
-        layoutV.addLayout(layoutH)
-        self.setLayout(layoutV)
+        vLayout= QVBoxLayout()
+        self.createPedidoInfo()
+        self.createCountElement()
+        
+        vLayout.setContentsMargins(30,30,30,30)
+
+        vLayout.addWidget(voltar_btn)
+        vLayout.addStretch(1)
+        vLayout.addWidget(titleLabel)
+        vLayout.addWidget(self.pedidoInfoBox)
+        vLayout.addStretch(1)
+        vLayout.addWidget(self.countElementGroupBox)
+        vLayout.addStretch(2)
+        
+        
+
+        '''gridLayout = QGridLayout()
+
+        gridLayout.addWidget(titleLabel, 0,1)
+        gridLayout.addLayout(scanLayout, 1,1)'''
+
+        vLayout.setAlignment(Qt.AlignCenter)
+
+        self.setLayout(vLayout)
+
+    def createPedidoInfo(self):
+        self.pedidoInfoBox = QGroupBox()
+        finalInfoLayout = QVBoxLayout()
+        scanInfoLayout = QFormLayout()
+
+        self.count_resp = QLineEdit(self)
+        self.count_resp.setPlaceholderText("ex. John Doe")
+
+        self.id_caixa = QLineEdit(self)
+        self.id_caixa.setPlaceholderText("ex. 12AB")
+
+        desc_le = QLineEdit('Descrição')
+        desc_le.setText = self.desc
+        desc_le.setReadOnly(True)
+        desc_le.setDisabled(True)
+
+        simafic = QLineEdit('COD. SIMAFIC')
+        simafic.setText = simafic
+        simafic.setReadOnly(True)
+        simafic.setDisabled(True)
+
+        #scanLayout.addWidget(self.voltar_btn)
+        scanInfoLayout.addRow("Descrição:", desc_le)
+        scanInfoLayout.addRow("COD. SIMAFIC:", simafic)
+        scanInfoLayout.addRow("Responsável pela contagem:", self.count_resp)
+        scanInfoLayout.addRow("Numero da Caixa:", self.id_caixa)
+        scanInfoLayout.setContentsMargins(75,75,75,10)
+
+        buttonsLayout = QHBoxLayout()
+
+        self.startCount = QPushButton('Confirmar')
+        self.startCount.clicked.connect(self.validaPedidoInfo)
+
+        cancelarCount = QPushButton('Cancelar')
+        cancelarCount.clicked.connect(self.cancelarScan)
+
+        buttonsLayout.setContentsMargins(75,10,75,20)
+
+
+        buttonsLayout.addWidget(self.startCount)
+        buttonsLayout.addWidget(cancelarCount)
+
+        finalInfoLayout.addLayout(scanInfoLayout)
+        finalInfoLayout.addLayout(buttonsLayout)
+
+        self.pedidoInfoBox.setLayout(finalInfoLayout)
+
+        pass;
+
+    def createCountElement(self):
+        self.countElementGroupBox = QGroupBox()
+        scanLayout = QVBoxLayout()
+        hCountLayout = QHBoxLayout()
+       
+        qtd_parcial_label = QLabel('Qtd. Atual:')
+        qtd_total_label = QLabel('Qtd. Total:')
+        qtd_total_label.setFont(self.font)
+        qtd_parcial_label.setFont(self.font)
+
+        qtd_parcial_le = QLineEdit()
+        qtd_total_le = QLineEdit()
+        qtd_total_le.setFont(self.font)
+        qtd_parcial_le.setFont(self.font)
+        qtd_parcial_le.setText(str(0))
+        qtd_parcial_le.setReadOnly(True)
+        qtd_total_le.setText(str(self.qtd_total))
+        qtd_total_le.setReadOnly(True)
+
+        qtd_parcial_label.setBuddy(qtd_parcial_le)
+        qtd_total_label.setBuddy(qtd_parcial_le)
+
+        input_scan_label = QLabel('Scanneie o COD. SIMAFIC do Produto:')
+        input_scan_label.setFont(self.fontScan)
+        input_scan_label.setAlignment(Qt.AlignCenter)
+        input_scanner = QLineEdit()
+        input_scanner.setAlignment(Qt.AlignCenter)
+        input_scanner.setFont(self.fontScan)
+        input_scan_label.setBuddy(input_scanner)
+
+        hCountLayout.addStretch(1)
+        hCountLayout.addWidget(qtd_parcial_label)
+        hCountLayout.addWidget(qtd_parcial_le)
+        hCountLayout.addStretch(1)
+        hCountLayout.addWidget(qtd_total_label)
+        hCountLayout.addWidget(qtd_total_le)
+        hCountLayout.addStretch(1)
+        hCountLayout.setContentsMargins(0,30,0,0)
+        scanLayout.setContentsMargins(75,20,75,75)
+
+    
+        scanLayout.addWidget(input_scan_label)
+        scanLayout.addWidget(input_scanner)
+        scanLayout.addStretch(1)
+        scanLayout.addLayout(hCountLayout)
+        scanLayout.addStretch(3)
+
+        self.countElementGroupBox.setLayout(scanLayout)
+        self.countElementGroupBox.setDisabled(True)
+
+    
+    def validaPedidoInfo(self):
+        try:
+            print ("validateInfoScan")
+            print ("Validando campos... {} {}".format(self.count_resp.text, self.id_caixa.text))
+            validateInfoScan(self.count_resp.text(), self.id_caixa.text())
+            self.startCount.setDisabled(True)
+            self.count_resp.setDisabled(True)
+            self.id_caixa.setDisabled(True)
+            self.countElementGroupBox.setDisabled(False)
+
+        except ValidationError as error:
+            error_dialog = QErrorMessage()
+            error_dialog.setWindowTitle(error.errors)
+            error_dialog.setWindowIcon(QIcon(main_icon))
+            error_dialog.showMessage(error.message)
+            error_dialog.exec_()
+       
+        
+    def cancelarScan(self):
+        print("Cancelar Scan")
+        
+    def goOperacoesLogisticas(self):
+        self.cams = OperacaoLogistica()
+        self.cams.show()
+        self.close()
 
     def goMainWindow(self):
         self.cams = MainWindow()
         self.cams.show()
         self.close() 
-
-
-'''
-if __name__ == '__main__':
-    app=QApplication(sys.argv)
-    ex=MainWindow()
-    sys.exit(app.exec_())'''
 
 if __name__ == '__main__':
 
@@ -481,40 +641,43 @@ if __name__ == '__main__':
     #gallery.show()
     #gallery.showMaximized()
     sys.exit(app.exec_())
+    callSuccessMsgBox('teste', 'teste')
 
 
+def teste():
+    print('teste')
+    pass
 
+''' def createBottomRightGroupBox(self):
+    self.bottomRightGroupBox = QGroupBox("Group 3")
+    self.bottomRightGroupBox.setCheckable(True)
+    self.bottomRightGroupBox.setChecked(True)
 
-   ''' def createBottomRightGroupBox(self):
-        self.bottomRightGroupBox = QGroupBox("Group 3")
-        self.bottomRightGroupBox.setCheckable(True)
-        self.bottomRightGroupBox.setChecked(True)
+    lineEdit = QLineEdit('s3cRe7')
+    lineEdit.setEchoMode(QLineEdit.Password)
 
-        lineEdit = QLineEdit('s3cRe7')
-        lineEdit.setEchoMode(QLineEdit.Password)
+    spinBox = QSpinBox(self.bottomRightGroupBox)
+    spinBox.setValue(50)
 
-        spinBox = QSpinBox(self.bottomRightGroupBox)
-        spinBox.setValue(50)
+    dateTimeEdit = QDateTimeEdit(self.bottomRightGroupBox)
+    dateTimeEdit.setDateTime(QDateTime.currentDateTime())
 
-        dateTimeEdit = QDateTimeEdit(self.bottomRightGroupBox)
-        dateTimeEdit.setDateTime(QDateTime.currentDateTime())
+    slider = QSlider(Qt.Horizontal, self.bottomRightGroupBox)
+    slider.setValue(40)
 
-        slider = QSlider(Qt.Horizontal, self.bottomRightGroupBox)
-        slider.setValue(40)
+    scrollBar = QScrollBar(Qt.Horizontal, self.bottomRightGroupBox)
+    scrollBar.setValue(60)
 
-        scrollBar = QScrollBar(Qt.Horizontal, self.bottomRightGroupBox)
-        scrollBar.setValue(60)
+    dial = QDial(self.bottomRightGroupBox)
+    dial.setValue(30)
+    dial.setNotchesVisible(True)
 
-        dial = QDial(self.bottomRightGroupBox)
-        dial.setValue(30)
-        dial.setNotchesVisible(True)
-
-        layout = QGridLayout()
-        layout.addWidget(lineEdit, 0, 0, 1, 2)
-        layout.addWidget(spinBox, 1, 0, 1, 2)
-        layout.addWidget(dateTimeEdit, 2, 0, 1, 2)
-        layout.addWidget(slider, 3, 0)
-        layout.addWidget(scrollBar, 4, 0)
-        layout.addWidget(dial, 3, 1, 2, 1)
-        layout.setRowStretch(5, 1)
-        self.bottomRightGroupBox.setLayout(layout)'''
+    layout = QGridLayout()
+    layout.addWidget(lineEdit, 0, 0, 1, 2)
+    layout.addWidget(spinBox, 1, 0, 1, 2)
+    layout.addWidget(dateTimeEdit, 2, 0, 1, 2)
+    layout.addWidget(slider, 3, 0)
+    layout.addWidget(scrollBar, 4, 0)
+    layout.addWidget(dial, 3, 1, 2, 1)
+    layout.setRowStretch(5, 1)
+    self.bottomRightGroupBox.setLayout(layout)'''

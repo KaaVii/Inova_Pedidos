@@ -10,22 +10,35 @@ from pandas import ExcelFile
 from property_reader import getConfig
 import re
 
+patternSimafic = re.compile('[0-9]{2}\.[0-9]{2}\.[0-9]{2}\.[0-9]{3}-[0-9]{1}')
+
 def validateCadastro(pedido, n_simafic, qtd_items):
-    print("validando campos...")
-    pattern = re.compile('[0-9]{2}\.[0-9]{2}\.[0-9]{2}\.[0-9]{3}-[0-9]{1}')
     success = True
     error="Dados Incorretos!"
     if not(len(pedido) < 10 and pedido.isdigit()):
         success=False
-        raise ValidationError("O pedido só pode conter números!", error)
+        raise ValidationError("O pedido só pode conter números e no máximo 10 digitos!", error)
         pass;
-    if not(pattern.match(n_simafic)):
-        raise ValidationError("Código SIMAFIC está errado!", error)
+    if not(patternSimafic.match(n_simafic)):
+        raise ValidationError("Código SIMAFIC está fora do padrão!", error)
         success=False
         pass;
     if not(len(qtd_items) < 10 and qtd_items.isdigit()):
-        raise ValidationError("A quantidade só pode conter números!", error)
+        raise ValidationError("A quantidade só pode conter números e no máximo 10 digitos!", error)
         success=False
+        pass;
+    return success
+
+def validateInfoScan(responsavel, caixa):
+    success = True
+    error="Dados Incorretos!"
+    if not(responsavel):
+        raise ValidationError("O Campo [Responsável pela contagem] deve ser preenchido.", error)
+        success=False
+        pass;
+    if not caixa:
+        success=False
+        raise ValidationError("O Campo [Numero da Caixa] deve ser preenchido.", error)
         pass;
     return success
 
@@ -82,25 +95,32 @@ def loadValidXLS():
 def add_pedido(pedido, n_simafic, qtd_items):
     print('Add Pedido')
     desc = df.loc[df['CODIGO'] == n_simafic, 'DESCRICAO']
-    pedidoModel = pdao.Pedido(pedido, n_simafic, desc, qtd_items, 0)
-    print(pedidoModel)
+    desc = desc.to_string()
+    pedidoModel = pdao.Pedido(pedido, n_simafic, desc, qtd_items, 0, None, None)
+    print('pedidoModel como Dict:' ,pedidoModel)
     pdao.inserirPedido(pedidoModel)
  
 
 
-def get_all_pedidos():
+def get_all_pedidos_pandas():
     arr = pdao.queryAllPedidos()
+    print(arr)
     df = pd.DataFrame.from_records(s.asdict() for s in arr)
+    print(df)
     return PandasModel(df)
 
+def get_all_pedidos():
+    arr=pdao.queryAllPedidos()
+    return arr
+
 def get_main_icon():
-    return getConfig('inova', 'icon')
+    return getConfig('inove', 'icon')
 
 def get_h_size():
-    return getConfig('inova', 'h_size')
+    return getConfig('inove', 'h_size')
 
 def get_v_size():
-    return getConfig('inova', 'v_size')
+    return getConfig('inove', 'v_size')
 
 if __name__ == "__main__":
     df = pd.read_excel('plan_test.xlsx', index_col=None, header=0)
