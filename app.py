@@ -1,16 +1,18 @@
 import fix_qt_import_error
-from exceptions import ValidationError
+from exceptions import ValidationError, DBPedidosException
 from services import (get_simafic_as_dataframe, get_main_icon, get_h_size, get_v_size, get_all_pedidos_pandas, add_pedido,validateCadastro,
-validateInfoScan,ValidationError, get_all_pedidos, get_all_pedidos_df, valida_simafic, update_pedido, validaQtdPedido, update_cancelar_scan)
+validateInfoScan,ValidationError, get_all_pedidos, get_all_pedidos_df, valida_simafic, update_pedido, validaQtdPedido, get_all_items_do_pedido, update_cancelar_scan, validaSimaficXLS)
 from assets.style import getStyle
-from PyQt5.QtCore import QDateTime, Qt, QTimer, QSize, QSortFilterProxyModel, pyqtSlot
+from classes.pedidoTreeModel import PedidoItensTree
+from PyQt5.QtCore import QDateTime, Qt, QTimer, QSize, QSortFilterProxyModel, pyqtSlot, QModelIndex
 from PyQt5 import QtGui
+import pprint
 from PyQt5.QtMultimedia import QSound
 from PyQt5.QtGui import QColor, QFont, QIcon, QPixmap
-from PyQt5.QtWidgets import (QApplication, QCheckBox, QComboBox, QDateTimeEdit, 
+from PyQt5.QtWidgets import (QApplication, QCheckBox, QComboBox, QDateTimeEdit, QAbstractItemView,
                              QDial, QDialog,QMainWindow, QGridLayout, QGroupBox, QHBoxLayout, QLabel, QLineEdit,
-                             QProgressBar, QPushButton, QRadioButton, QScrollBar, QSizePolicy,QMessageBox,
-                             QSlider, QSpinBox, QStyleFactory, QTableWidget, QTabWidget, QTextEdit, QFormLayout,
+                             QProgressBar, QPushButton, QRadioButton, QScrollBar, QSizePolicy,QMessageBox, QListView,
+                             QSlider, QSpinBox, QStyleFactory, QTableWidget, QTabWidget, QTextEdit, QFormLayout,QTreeView,
                              QVBoxLayout, QWidget, QErrorMessage, QTableView, QSpacerItem, QListWidget, QListWidgetItem, QStyle)
 
 
@@ -20,12 +22,12 @@ v_size=int(get_v_size())
 
 style = getStyle()
 
-
-
+pp = pprint.PrettyPrinter(indent=4)
 class CadastroPedidos(QDialog):
 
     def __init__(self, parent=None):
         super(CadastroPedidos, self).__init__(parent)
+        self.setWindowFlags(Qt.WindowMinMaxButtonsHint | Qt.WindowCloseButtonHint)
 
         self.setMinimumSize(QSize(h_size, v_size))
         self.originalPalette = QApplication.palette()
@@ -33,17 +35,21 @@ class CadastroPedidos(QDialog):
         self.setWindowTitle("Cadastro de Pedidos")
         self.setStyleSheet(style)
 
+        self.pedidos_selecionados = []
+
        #Sempre que for iniciado criará um objeto data
         self.data = dict()
         
         voltar_btn = QPushButton(self)
         voltar_btn.setText('Voltar')
         voltar_btn.clicked.connect(self.goMainWindow)
+        voltar_btn.setFocusPolicy(Qt.NoFocus)
+
 
         self.dadosDoPedido()
         self.resumoGeral()
         self.resumoDosItens()
-       
+
         '''disableWidgetsCheckBox.toggled.connect(
             self.bottomLeftGroupBox.setHidden
         )
@@ -75,7 +81,7 @@ class CadastroPedidos(QDialog):
 
         formLayout = QFormLayout()
         self.pedido = QLineEdit(self)
-        self.pedido.setPlaceholderText("ex: 2112")
+        self.pedido.setPlaceholderText("ex: 123.456")
         pedido_label = QLabel("Pedido:")
 
         self.n_simafic = QLineEdit(self)
@@ -141,7 +147,7 @@ class CadastroPedidos(QDialog):
 
 
         #[First Tab] - Set TableView
-        tabv_pedidos = QTableView()
+        self.tabv_pedidos = QTableView()
         tab2hbox = QHBoxLayout()
         self.modelAllPedidos = get_all_pedidos_pandas()
 
@@ -157,24 +163,22 @@ class CadastroPedidos(QDialog):
         
         
        
-        tabv_pedidos.resizeColumnsToContents()
-        tabv_pedidos.setColumnWidth(2, 100)
-        tabv_pedidos.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
-        tab2hbox.addWidget(tabv_pedidos)
+        self.tabv_pedidos.resizeColumnsToContents()
+        self.tabv_pedidos.doubleClicked.connect(self.abrirIItensDoPedido)
+        self.tabv_pedidos.setSelectionMode(QAbstractItemView.SingleSelection)
+        self.tabv_pedidos.clicked.connect(lambda item: self.tabv_pedidos.selectRow(item.row()))
+
+        self.tabv_pedidos.setColumnWidth(2, 100)
+        self.tabv_pedidos.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
+        tab2hbox.addWidget(self.tabv_pedidos)
 
 
         #[Connect Fields]
         searchProduto.textChanged.connect(lambda wildcard: self.proxyPedidoFilterSecondLayer.setFilterWildcard(wildcard))
         searchPedido.textChanged.connect(lambda wildcard: self.proxyPedidoFilter.setFilterWildcard(wildcard))
-        tabv_pedidos.setModel(self.proxyPedidoFilterSecondLayer)
-        tabv_pedidos.resizeColumnsToContents
-        tabv_pedidos.resizeRowsToContents
-         
-
-        
+        self.tabv_pedidos.setModel(self.proxyPedidoFilterSecondLayer)
+       
         #[First Tab] - Set Layout
-        
-
       
         tabItensValidos = QWidget()
         tableItensValidos = QTableView()
@@ -195,48 +199,68 @@ class CadastroPedidos(QDialog):
         layoutText.addWidget(searchProduto)
         
         layout.addLayout(layoutText)
-        layout.addWidget(tabv_pedidos)
+        self.tabv_pedidos.resizeColumnsToContents()
+        layout.addWidget(self.tabv_pedidos)
         tab1ListaPedidos.setLayout(layout)
+        
       
 
         #TODO: Agrupar items por pedido (Drop Down) | Auto-resize nas cells da TView
-        #TODO: Adicionar método de remoção de Item
+        #TODO: Adicionar
 
         self.topRightGroupBox.addTab(tab1ListaPedidos, "&Lista de Pedidos: ")
         self.topRightGroupBox.addTab(tabItensValidos, "&Lista de Itens:")
 
     def resumoDosItens(self):
         self.bottomLeftGroupBox = QGroupBox("Lista de Itens do Pedido nº")
-        
         self.listDataItens = list()
         self.listaViewItens=QListWidget()
 
-        removeSelected = QPushButton('Remover Itens Selecionados')
-        removeSelected.clicked.connect(self.removerItens)
-
-        layout = QGridLayout()
-        layout.addWidget(removeSelected)
-        
         verticalSpacer = QSpacerItem(40, 20, QSizePolicy.Minimum, QSizePolicy.Expanding)
 
-        self.bottomLeftGroupBox.setLayout(layout)
+        self.resumoLayout = QGridLayout()
+        
+        removeSelected = QPushButton('Remover Itens Selecionados')
+        removeSelected.clicked.connect(self.removerItens)
+        self.resumoLayout.addItem(verticalSpacer)
+        self.resumoLayout.addWidget(removeSelected)
+        self.bottomLeftGroupBox.setLayout(self.resumoLayout)
+
+    def abrirIItensDoPedido(self, item):
+        print("[abrirIItensDoPedido] O Item foi selecionado através de um click na: {} x linha: {}".format(item.column(), item.row()))
+        pedido = self.tabv_pedidos.model().index(item.row(), 0).data()
+        self.pedidos_selecionados = pedido
+        
+        
+        try:
+            pedido_list_items = get_all_items_do_pedido(pedido)
+            print(pedido_list_items)
+        except (ValidationError, DBPedidosException) as error:
+            error_dialog = QErrorMessage()  
+            error_dialog.setWindowTitle(error.errors)
+            error_dialog.setWindowIcon(QIcon(main_icon))
+            error_dialog.showMessage(error.message)
+            error_dialog.exec_()
+        
+
 
     def add_items(self):
         try:
             pedido, n_simafic, qtd_items = self.pedido.text(), self.n_simafic.text(), self.qtd_items.text()
-            if validateCadastro(self.pedido.text(), self.n_simafic.text(), self.qtd_items.text()):
+            print ("Add Pedido: {} {} {}".format(pedido, n_simafic, qtd_items))
+            if validateCadastro(pedido, n_simafic, qtd_items):
                 print ("Add Pedido: {} {} {}".format(pedido, n_simafic, qtd_items))
                 mb = QMessageBox()
                 mb.setIconPixmap(QPixmap('assets/check_icon_blue2'))
                 mb.setWindowTitle("Sucesso")
                 mb.setText('O pedido: {} foi criado com sucesso!'.format(pedido))
-                mb.exec_()
                 add_pedido(pedido, n_simafic, qtd_items)
+                mb.exec_()
                 self.update_model_tableview()
                 self.limpar_pedidos()
                 
 
-        except ValidationError as error:
+        except (ValidationError, DBPedidosException) as error:
             error_dialog = QErrorMessage()  
             error_dialog.setWindowTitle(error.errors)
             error_dialog.setWindowIcon(QIcon(main_icon))
@@ -253,13 +277,15 @@ class CadastroPedidos(QDialog):
     def limpar_pedidos(self):
         self.n_simafic.clear()
         self.qtd_items.clear()
-        self.pedido.clear()
+        #self.pedido.clear()
 
     def removerItens(self):
-        listItems=self.listaViewItens.selectedItems()
+        '''listItems=self.listaViewItens.selectedItems()
         if not listItems: return        
         for item in listItems:
-            print (type(item), dir(item))
+            print (type(item), dir(item))'''
+
+        
 
     def goMainWindow(self):
         self.cams = MainWindow()
@@ -370,14 +396,14 @@ class MainWindow(QMainWindow):
     def cadastrarPedido(self):
         self.statusBar().showMessage("Switched to CadastroPedidos")
         self.cams = CadastroPedidos() 
-        self.cams.showMaximized()
+        self.cams.show()
         self.close()
 
     @pyqtSlot()
     def operacaoLogistica(self):
         self.statusBar().showMessage("Switched to OperacaoLogistica")
         self.cams = OperacaoLogistica() 
-        self.cams.showMaximized()
+        self.cams.show()
         self.close()
         
 
@@ -385,14 +411,13 @@ class OperacaoLogistica(QDialog):
     #TODO: Acertar formatação na listagem de items por SIMAFIC 
     def __init__(self, parent=None):
         super().__init__(parent)
+        self.setWindowFlags(Qt.WindowMinMaxButtonsHint | Qt.WindowCloseButtonHint)
         self.setWindowTitle('Operação Logística')
         self.setMinimumSize(QSize(h_size, v_size))
         self.setWindowIcon(QIcon(main_icon))
 
         verticalSpacer = QSpacerItem(40, 20, QSizePolicy.Minimum, QSizePolicy.Expanding)
 
-
-        #TODO: 
         #Pedido Input Field
         self.numero_pedido = QLineEdit(self)
         self.numero_pedido.setPlaceholderText("Insira o Número do Pedido")
@@ -407,10 +432,14 @@ class OperacaoLogistica(QDialog):
         #Adicionar Cores no StyleSheet
         colors = ['##393318', '  ##fff']
         self.pedidos = get_all_pedidos()
+        self.item_result = None
+        self.item_escolhido = None
+
         self.id_pedido_list = QListWidget()
         self.simafics_do_id = QListWidget()
         #self.simafics_do_id.setHidden(True)
         self.createPedidoIdList()
+
         self.id_pedido_list.itemClicked.connect(lambda id_pedido: self.createListaSimafics(id_pedido))
         self.simafics_do_id.itemDoubleClicked.connect(lambda pedido: self.simaficSelecionado(pedido))
 
@@ -418,6 +447,19 @@ class OperacaoLogistica(QDialog):
         self.pedidos_label.setBuddy(self.id_pedido_list)
         self.simafic_label = QLabel()
         self.simafic_label.setBuddy(self.simafics_do_id)
+
+        
+        self.itensTree = PedidoItensTree()
+        self.treeItensTV = QTreeView()
+        self.treeItensTV.setEditTriggers(QAbstractItemView.NoEditTriggers)
+        self.treeItensTV.setAlternatingRowColors(True)
+        self.treeItensTV.setRootIsDecorated(True)
+        self.treeItensTV.doubleClicked.connect(self.simaficSelecionado)
+        self.treeItensTV.setColumnHidden(8, True)
+        
+
+        
+
 
         if len(self.pedidos) <= 0:
             self.pedidos_label.setText("É necessário adicionar um pedido na tela de cadastro.")
@@ -436,9 +478,9 @@ class OperacaoLogistica(QDialog):
         layout.addWidget(self.pedidos_label, 1,0)
         layout.addWidget(self.simafic_label, 1, 1)
         layout.addWidget(self.id_pedido_list,2,0)
-        layout.addWidget(self.simafics_do_id, 2,1)
+        layout.addWidget(self.treeItensTV, 2,1)
+        #layout.addWidget(self.simafics_do_id, 2,1)
         self.setLayout(layout)
-
 
     def createPedidoIdList(self):
         print('def createPedidoIdList(self):')
@@ -460,32 +502,36 @@ class OperacaoLogistica(QDialog):
        
 
     def createListaSimafics(self, id_pedido):
+
+        
+        self.pedidosModel = self.itensTree.createPedidosModel(self.itensTree)
+        self.treeItensTV.setModel(self.pedidosModel)
         print('def listaSimafics(self, id_pedido): {id_pedido}'.format(id_pedido=id_pedido.text()))
-        item_result = [x for x in self.pedidos if x.id_pedido == id_pedido.text()]
+        self.item_result = None
+        self.item_result = [x for x in self.pedidos if x.id_pedido == id_pedido.text()]
         self.simafics_do_id.clear()
-        for idx, item in enumerate(item_result):
-            i = QListWidgetItem('{}'.format(str(item.asdict())))
-            i.setData(Qt.UserRole, item)
-            if item.qty_total is item.qty_scanneada:
-                i.setBackground( QColor('#5eba7d'))
-            else:
-                if( idx % 2 ==0):
-                    i.setBackground( QColor('#c8ccd0') )
-                else:
-                    i.setBackground( QColor('#ffffff') )
-            self.simafics_do_id.addItem(i)
+        self.pedidosModel.beginResetModel
+        self.pedidosModel.modelReset
+        self.pedidosModel.endResetModel
+    
+        for idx, item in enumerate(self.item_result):
+            self.itensTree.addItens(self.pedidosModel, item.cod_simafic, item.desc, item.qty_scanneada, item.qty_total, item.nome_responsavel, item.id_caixa, item.time_updated, item.id_pedido, item)
+
         self.simafic_label.setText("Listagem de Itens por SIMAFIC:")
-        self.simafic_label.setStyleSheet("QLabel { color: black; }");
+        self.simafic_label.setStyleSheet("QLabel { color: black; }")
 
         
         #self.simafics_do_id.setHidden(False)
         
 
-    def simaficSelecionado(self, value):
-        print (value.text())
-        self.cams = ItemScanner(value)
-        self.cams.showMaximized()
-        self.close()
+    def simaficSelecionado(self, item):
+        print(item.column(), item.row())
+        simafic_escolhido = self.treeItensTV.model().index(item.row(), 0).data()
+        id_pedido = self.treeItensTV.model().index(item.row(), 7).data()
+        self.item_escolhido = [x for x in self.item_result if x.cod_simafic == simafic_escolhido and x.id_pedido == id_pedido]
+        self.cams = ItemScanner(self.item_escolhido[0])
+        self.cams.show()
+        #self.close()
 
     def goMainWindow(self):
         self.cams = MainWindow()
@@ -494,16 +540,16 @@ class OperacaoLogistica(QDialog):
 
     def goScan(self):
         self.cams = ItemScanner("Eu sou o Pedido", "Eu sou o Simafic", "Eu sou a Descrição", "300")
-        self.cams.showMaximized()
+        self.cams.show()
         self.close()
 
 
 class ItemScanner(QDialog):
-    def __init__(self, pedido, parent=None):
+    def __init__(self, item, parent=None):
         super().__init__(parent)
+        self.setWindowFlags(Qt.WindowMinMaxButtonsHint | Qt.WindowCloseButtonHint)
         
-        print(pedido.data(Qt.UserRole))
-        self.pedido = pedido.data(Qt.UserRole)
+        self.pedido = item
         self.font = QFont()
         self.fontScan = QFont()
         self.fontScan.setPointSize(14)
@@ -668,7 +714,7 @@ class ItemScanner(QDialog):
             self.countElementGroupBox.setDisabled(False)
             self.input_scanner.setFocus()
         
-        except (ValidationError) as error:
+        except (ValidationError, DBPedidosException) as error:
             error_dialog = QErrorMessage()
             error_dialog.setWindowTitle(error.errors)
             error_dialog.setWindowIcon(QIcon(main_icon))
@@ -695,13 +741,14 @@ class ItemScanner(QDialog):
                 self.pedido.id_caixa = self.id_caixa_le.text()
                 update_pedido(self.pedido)
                 self.input_scanner.clear()
-        except (ValidationError) as error:
+        except (ValidationError, DBPedidosException) as error:
             error_dialog = QErrorMessage()
             errorSound = QSound('assets/error.wav')
             errorSound.play()
             error_dialog.setWindowTitle(error.errors)
             error_dialog.setWindowIcon(QIcon(main_icon))
             error_dialog.showMessage(error.message)
+            self.input_scanner.clear()
             error_dialog.exec_()
         
         
@@ -709,7 +756,7 @@ class ItemScanner(QDialog):
 
     def goOperacoesLogisticas(self):
         self.cams = OperacaoLogistica()
-        self.cams.showMaximized()
+        self.cams.show()
         self.close()
 
     def goMainWindow(self):
@@ -728,7 +775,7 @@ if __name__ == '__main__':
     mainView.show()
     
     #gallery.show()
-    #gallery.showMaximized()
+    #gallery.show()
     sys.exit(app.exec_())
 
 def teste():

@@ -1,40 +1,30 @@
-import sys
-
-from PySide import QtGui
-
-
-class MainWindow(QtGui.QMainWindow):
-    def __init__(self, parent=None):
+from PyQt5.QtWidgets import  QApplication, QTreeWidget, QTreeWidgetItem
+ 
+class ViewTree(QTreeWidget):
+    def __init__(self, value):
         super().__init__()
-
-        self.resize(720, 480)
-        central_widget = QtGui.QWidget(self)
-        self.setCentralWidget(central_widget)
-
-        layout = QtGui.QHBoxLayout(central_widget)
-
-        self.text_edit = QtGui.QTextEdit(central_widget)
-        layout.addWidget(self.text_edit)
-
-        self.drop_list = QtGui.QListWidget(central_widget)
-        self.drop_list.setSelectionMode(QtGui.QAbstractItemView.MultiSelection)
-        self.drop_list.addItems(['one', 'two', 'three', 'four'])
-        self.drop_list.itemSelectionChanged.connect(self.show_List)
-        layout.addWidget(self.drop_list)
-
-        statusbar = QtGui.QStatusBar(self)
-        self.setStatusBar(statusbar)
-
-        action_ShowList = QtGui.QAction(self)
-        action_ShowList.triggered.connect(self.show_List)
-
-        self.show()
-
-    def show_List(self):
-        self.text_edit.setText(repr(self.drop_list.selectedItems()))
-
-
-if __name__ == "__main__":
-    app = QtGui.QApplication(sys.argv)
-    frame = MainWindow()
-    sys.exit(app.exec_())
+        def fill_item(item, value):
+            def new_item(parent, text, val=None):
+                child = QTreeWidgetItem([text])
+                fill_item(child, val)
+                parent.addChild(child)
+                child.setExpanded(True)
+            if value is None: return
+            elif isinstance(value, dict):
+                for key, val in sorted(value.items()):
+                    new_item(item, str(key), val)
+            elif isinstance(value, (list, tuple)):
+                for val in value:
+                    text = (str(val) if not isinstance(val, (dict, list, tuple))
+                            else '[%s]' % type(val).__name__)
+                    new_item(item, text, val)
+            else:
+                new_item(item, str(value))
+ 
+        fill_item(self.invisibleRootItem(), value)
+ 
+if __name__ == '__main__':
+    app = QApplication([])
+    window = ViewTree({"Pipe 1": {'1.Name': 'ABC', '2.Outside diameter': '10', '3.Wall thickness': '5', '4.Density': '7850', '5.Liner layers': {1: {'1.Liner name': 'SAD', '2.Liner thickness': '5', '3.Liner density': '900'}}, '6.Coating layers': {1: {'1.Coating name': 'TWR', '2.Coating thickness': '50', '3.Coating density': '3000', '4.Coating cutback': '0.7', '5.Coating absorption': '4'}}}})
+    window.show()
+    app.exec_()

@@ -3,7 +3,7 @@ import random as rnd
 import pandas as pd
 import classes.pedidodao as pdao
 from classes.dfmodel import DataFrameModel as PandasModel
-from exceptions import ValidationError
+from exceptions import ValidationError, DBPedidosException
 import json
 from pandas import ExcelWriter
 from pandas import ExcelFile
@@ -11,20 +11,25 @@ from property_reader import getConfig
 import re
 
 patternSimafic = re.compile('[0-9]{2}\.[0-9]{2}\.[0-9]{2}\.[0-9]{3}-[0-9]{1}')
+patternPedido = re.compile('[0-9]{3}\.[0-9]{3}')
 
 def validateCadastro(pedido, n_simafic, qtd_items):
     success = True
     error="Dados Incorretos!"
-    if not(len(pedido) < 10 and pedido.isdigit()):
+    if not(len(pedido) <= 7 and patternPedido.match(pedido)):
         success=False
         raise ValidationError("O pedido só pode conter números e no máximo 10 digitos!", error)
         pass
     if not(patternSimafic.match(n_simafic)):
-        raise ValidationError("Código SIMAFIC está fora do padrão!", error)
+        raise ValidationError("Código SIMAFIC [{}] está fora do formato padrão!".format(n_simafic), error)
         success=False
         pass
     if not(len(qtd_items) < 10 and qtd_items.isdigit()):
-        raise ValidationError("A quantidade só pode conter números e no máximo 10 digitos!", error)
+        raise ValidationError("O campo quantidade só pode contar numeros e no máximo 10 digitos.", error)
+        success=False
+        pass
+    if(not validaSimaficXLS(n_simafic)):
+        raise ValidationError("Código SIMAFIC não encontrado na planilha.","Simafic Incorreto!")
         success=False
         pass
     return success
@@ -45,13 +50,13 @@ def valida_simafic(s_input, pedido):
     error = "Simafic Incorreto!"
     if not(patternSimafic.match(s_input)):
         success=False
-        raise ValidationError("Código SIMAFIC está fora do padrão!", error)
+        raise ValidationError("Código SIMAFIC [{}] está fora do formato padrão!".format(s_input), error)
     if (pedido.qty_scanneada >= pedido.qty_total):
         success=False
-        raise ValidationError("O Pedido já atingiu a quantidade", error)
+        raise ValidationError("O Pedido já atingiu a quantidade cadastrada.", error)
     if (s_input != pedido.cod_simafic):
         success=False
-        raise ValidationError("O Código está errado, verifique o produto.", error)
+        raise ValidationError("A leitura do código da embalagem [{}] não corresponde ao código [{}]. Verifique a etiqueta.".format(s_input, pedido.cod_simafic), error)
     if (s_input is pedido.cod_simafic):        
         success = True
     return success
@@ -63,14 +68,12 @@ def validaQtdPedido(pedido):
     print('validaQtdPedido | {}'.format(str(success)))
     return success
 
-def validaItem(produto):
+def validaSimaficXLS(n_simafic):
     roupa_dict = df.T.to_dict().values()
+    success = False
     for val in roupa_dict:
-        print (val)
-        if (produto in val.get('CODIGO')):
-            print("Produto encontrado: ".format(val.get('CODIGO')))
-            print(val.get('CODIGO'))
-            return val
+        if n_simafic in val.get('CODIGO'):success= True
+    return success
 
 def get_simafic_as_dataframe():
     validDf = loadValidXLS()
@@ -105,34 +108,59 @@ def add_pedido(pedido, n_simafic, qtd_items):
     desc = desc.to_string()
     pedidoModel = pdao.Pedido(pedido, n_simafic, desc, qtd_items, 0, None, None)
     print('pedidoModel como Dict:' ,pedidoModel)
-    pdao.inserirPedido(pedidoModel)
- 
+    try:
+        pdao.inserirPedido(pedidoModel)
+    except Exception as e:
+        if 'UNIQUE constraint failed' in str(e):
+            raise DBPedidosException('Código SIMAFIC: {n_simafic}, já existente para este pedido de número: {pedido}.'.format(n_simafic=n_simafic,pedido=pedido),'Erro ao acessar o Banco de Dados:')
+        else:
+            raise DBPedidosException(str(e),'Erro ao acessar o Banco de Dados:')
 def update_pedido(pedido):
-    pdao.update_pedido(pedido)
+    try:
+        pdao.update_pedido(pedido)
+    except Exception as e:
+        raise DBPedidosException(str(e),'Erro ao acessar o Banco de Dados:')
 
 def update_cancelar_scan(pedido):
     pedido.qty_scanneada=0
-    pdao.update_pedido(pedido)
+    try:
+        pdao.update_pedido(pedido)
+    except Exception as e:
+        raise DBPedidosException(str(e),'Erro ao acessar o Banco de Dados:')
 
 def get_all_pedidos_pandas():
-    arr = pdao.queryAllPedidos()
+    
+    try:
+        arr = pdao.queryAllPedidos()
+    except Exception as e:
+        raise DBPedidosException(str(e),'Erro ao acessar o Banco de Dados:')
     print(arr)
     df = pd.DataFrame.from_records(s.asdict() for s in arr)
     print(df)
     return PandasModel(df)
 
 def get_all_pedidos():
-    arr=pdao.queryAllPedidos()
+    
+    try:
+        arr = pdao.queryAllPedidos()
+    except Exception as e:
+        raise DBPedidosException(str(e),'Erro ao acessar o Banco de Dados:')    
     return arr
 
 def get_all_pedidos_df():
-    arr = pdao.queryAllPedidos()
-    print(arr)
+    try:
+        arr = pdao.queryAllPedidos()
+    except Exception as e:
+        raise DBPedidosException(str(e),'Erro ao acessar o Banco de Dados:')
     df = pd.DataFrame.from_records(s.asdict() for s in arr)
     return df
 
-def get_all_items_do_pedido():
-    pass
+def get_all_items_do_pedido(pedido):
+    try:
+        result = pdao.dinamicQuery(pedido)
+    except Exception as e: 
+        raise DBPedidosException(str(e), 'Erro ao acessar o Banco de Dados:')
+    return result
 
 def get_main_icon():
     return getConfig('inove', 'icon')
@@ -143,11 +171,13 @@ def get_h_size():
 def get_v_size():
     return getConfig('inove', 'v_size')
 
+def get_tree_simafic(input_dict):
+    return ViewTree(input_dict)
+
 if __name__ == "__main__":
     df = pd.read_excel('plan_test.xlsx', index_col=None, header=0)
     valoresPermitidos = json.loads(getConfig('filtros', 'tamanhos'))
-    print(loadValidXLS())
-    #get_simafic_as_dataframe()
+    validaSimaficXLS("08.05.31.404-4")
 
 else:
     df = pd.read_excel('plan_test.xlsx', index_col=None, header=0)

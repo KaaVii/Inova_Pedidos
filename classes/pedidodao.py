@@ -45,11 +45,11 @@ class Pedido(Base):
     nome_responsavel = Column(String(120), unique=False, nullable=False)
     id_caixa = Column(String(80), unique=False, nullable=False)
     data_criacao = Column(DateTime, default=datetime.now)
-    #time_updated = Column(DateTime(timezone=True), onupdate=(func.now()-timedelta(hours=-3)))
     time_updated = Column(DateTime, onupdate=datetime.now)
+    
     def __init__(self, id_pedido, cod_simafic, desc, qty_total, qty_scanneada, nome_responsavel, id_caixa):
        
-        self.id_pedido = int(id_pedido)
+        self.id_pedido = id_pedido
         self.cod_simafic = str(cod_simafic)
         self.desc = str(desc)
         self.qty_total = int(qty_total)
@@ -70,7 +70,6 @@ class Pedido(Base):
         'Qtd. Scanneada': self.qty_scanneada, 'Nº da Caixa':self.id_caixa, 
         'Responsável': self.nome_responsavel,'Data Criação': self.data_criacao,
         'Data Atualização':self.time_updated})
-
 
 if __name__ == "__main__":
     # Removendo todas as tabelas do banco.
@@ -140,12 +139,13 @@ else :
         session.close()
 
     def queryAllPedidos():
+        
         session = Session()
         dados = session.query(Pedido).all()
         print(dados)
         session.close()
         return dados
-
+  
     def update_pedido(pedido):
         session = Session() 
         session.query(Pedido).filter_by(id_pedido=pedido.id_pedido).filter_by(cod_simafic=pedido.cod_simafic).update({column: getattr(pedido, column) for column in Pedido.__table__.columns.keys()})
