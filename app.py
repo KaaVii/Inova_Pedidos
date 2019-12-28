@@ -4,7 +4,7 @@ from services import (get_simafic_as_dataframe, get_main_icon, get_h_size, get_v
 validateInfoScan,ValidationError, get_all_pedidos, get_all_pedidos_df, valida_simafic, update_pedido, validaQtdPedido, get_all_items_do_pedido, update_cancelar_scan, validaSimaficXLS)
 from assets.style import getStyle
 from classes.pedidoTreeModel import PedidoItensTree
-from PyQt5.QtCore import QDateTime, Qt, QTimer, QSize, QSortFilterProxyModel, pyqtSlot, QModelIndex
+from PyQt5.QtCore import QDateTime, Qt, QTimer, QSize, QSortFilterProxyModel, pyqtSlot, QModelIndex, QStringListModel
 from PyQt5 import QtGui
 import pprint
 from PyQt5.QtMultimedia import QSound
@@ -26,7 +26,7 @@ pp = pprint.PrettyPrinter(indent=4)
 class CadastroPedidos(QDialog):
 
     def __init__(self, parent=None):
-        super(CadastroPedidos, self).__init__(parent)
+        super(CadastroPedidos, self).__init__(parent=None)
         self.setWindowFlags(Qt.WindowMinMaxButtonsHint | Qt.WindowCloseButtonHint)
 
         self.setMinimumSize(QSize(h_size, v_size))
@@ -60,8 +60,8 @@ class CadastroPedidos(QDialog):
 
 
         leftLayout = QVBoxLayout()
-        leftLayout.addWidget(self.topLeftGroupBox, 50)
-        leftLayout.addWidget(self.bottomLeftGroupBox, 50)
+        leftLayout.addWidget(self.topLeftGroupBox, 100)
+        #leftLayout.addWidget(self.bottomLeftGroupBox, 50)
 
         mainLayout = QGridLayout()
         mainLayout.addLayout(topLayout, 0, 0, 1, 2)
@@ -166,7 +166,6 @@ class CadastroPedidos(QDialog):
         self.tabv_pedidos.resizeColumnsToContents()
         self.tabv_pedidos.doubleClicked.connect(self.abrirIItensDoPedido)
         self.tabv_pedidos.setSelectionMode(QAbstractItemView.SingleSelection)
-        self.tabv_pedidos.clicked.connect(lambda item: self.tabv_pedidos.selectRow(item.row()))
 
         self.tabv_pedidos.setColumnWidth(2, 100)
         self.tabv_pedidos.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
@@ -419,8 +418,11 @@ class OperacaoLogistica(QDialog):
         verticalSpacer = QSpacerItem(40, 20, QSizePolicy.Minimum, QSizePolicy.Expanding)
 
         #Pedido Input Field
+        self.proxy_list_result_id = QSortFilterProxyModel()
         self.numero_pedido = QLineEdit(self)
         self.numero_pedido.setPlaceholderText("Insira o Número do Pedido")
+        self.numero_pedido.textChanged.connect(lambda wildcard: self.proxy_list_result_id.setFilterWildcard(wildcard))
+
 
         #Voltar Btn
         self.voltar_btn = QPushButton(self)
@@ -435,12 +437,12 @@ class OperacaoLogistica(QDialog):
         self.item_result = None
         self.item_escolhido = None
 
-        self.id_pedido_list = QListWidget()
+        self.id_pedido_list = QListView()
         self.simafics_do_id = QListWidget()
         #self.simafics_do_id.setHidden(True)
         self.createPedidoIdList()
 
-        self.id_pedido_list.itemClicked.connect(lambda id_pedido: self.createListaSimafics(id_pedido))
+        self.id_pedido_list.clicked.connect(lambda id_pedido: self.createListaSimafics(id_pedido))
         self.simafics_do_id.itemDoubleClicked.connect(lambda pedido: self.simaficSelecionado(pedido))
 
         self.pedidos_label = QLabel()
@@ -486,6 +488,8 @@ class OperacaoLogistica(QDialog):
         print('def createPedidoIdList(self):')
         onlyids = set()
         pedidosbyid = []
+        result = []
+        self.proxy_list_result_id = QSortFilterProxyModel()
         for obj in self.pedidos:
             if obj.id_pedido not in onlyids:
                 pedidosbyid.append(obj)
@@ -498,23 +502,28 @@ class OperacaoLogistica(QDialog):
                 i.setBackground( QColor('#c8ccd0') )
             else:
                 i.setBackground( QColor('#ffffff') )
-            self.id_pedido_list.addItem(i)
+            result.append(str(pedido))
+
+        self.pedidoId_model = QStringListModel(result, self)
+        self.proxy_list_result_id.setSourceModel(self.pedidoId_model)
+        self.id_pedido_list.setModel(self.proxy_list_result_id)
        
 
     def createListaSimafics(self, id_pedido):
 
-        
+        pedido = id_pedido.data()
         self.pedidosModel = self.itensTree.createPedidosModel(self.itensTree)
         self.treeItensTV.setModel(self.pedidosModel)
-        print('def listaSimafics(self, id_pedido): {id_pedido}'.format(id_pedido=id_pedido.text()))
+        print('def listaSimafics(self, id_pedido): {id_pedido}'.format(id_pedido=pedido))
         self.item_result = None
-        self.item_result = [x for x in self.pedidos if x.id_pedido == id_pedido.text()]
+        self.item_result = [x for x in self.pedidos if x.id_pedido == pedido]
         self.simafics_do_id.clear()
         self.pedidosModel.beginResetModel
         self.pedidosModel.modelReset
         self.pedidosModel.endResetModel
     
         for idx, item in enumerate(self.item_result):
+            print(item)
             self.itensTree.addItens(self.pedidosModel, item.cod_simafic, item.desc, item.qty_scanneada, item.qty_total, item.nome_responsavel, item.id_caixa, item.time_updated, item.id_pedido, item)
 
         self.simafic_label.setText("Listagem de Itens por SIMAFIC:")

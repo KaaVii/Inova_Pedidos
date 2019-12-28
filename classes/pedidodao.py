@@ -8,6 +8,7 @@ from sqlalchemy import Column, Integer, String, create_engine, DateTime, event, 
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.schema import Sequence
+import os
 
 from datetime import datetime, timedelta
 
@@ -75,11 +76,14 @@ if __name__ == "__main__":
     # Removendo todas as tabelas do banco.
     # Base.metadata.drop_all(engine)
 
-    # Criando todas as tabelas.
-    Base.metadata.create_all(engine)
+    def createDb():
+        # Criando todas as tabelas.
+        Base.metadata.create_all(engine)
 
     # Criando uma sessão (add, commit, query, etc).
-    session = Session()
+        session = Session()
+        session.close()
+    createDb()
 
     # Criando os dados que serão inseridos na tabela.
     # Classe com o construtor.
@@ -127,9 +131,13 @@ if __name__ == "__main__":
     # print('Registro DEPOIS da remoção:', session.query(NomeDaTabela).filter(NomeDaTabela.id == 1).one_or_none())
 
     # Fechando a sessão.
-    session.close()
+        
 #!/usr/bin/env python
 else :
+
+    if not (os.path.isfile('../db.sqlite3') or os.path.isfile('db.sqlite3')):
+        print('sqlite não encontrado, criando banco...')
+        createDb()
 
     def inserirPedido(pedido):
         pedido.id = id(pedido)
