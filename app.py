@@ -1,7 +1,8 @@
 import fix_qt_import_error
 from exceptions import ValidationError, DBPedidosException
 from services import (get_simafic_as_dataframe, get_main_icon, get_h_size, get_v_size, get_all_pedidos_pandas, add_pedido,validateCadastro,
-validateInfoScan,ValidationError, get_all_pedidos, get_all_pedidos_df, valida_simafic, update_pedido, validaQtdPedido, get_all_items_do_pedido, update_cancelar_scan, validaSimaficXLS)
+validateInfoScan,ValidationError, get_all_pedidos, get_all_pedidos_df, valida_simafic, update_pedido, validaQtdPedido, get_all_items_do_pedido, update_cancelar_scan, 
+get_pedido_x_item, validaSimaficXLS, excluirPedidoItem)
 from assets.style import getStyle
 from classes.pedidoTreeModel import PedidoItensTree
 from PyQt5.QtCore import QDateTime, Qt, QTimer, QSize, QSortFilterProxyModel, pyqtSlot, QModelIndex, QStringListModel
@@ -9,7 +10,7 @@ from PyQt5 import QtGui
 import pprint
 from PyQt5.QtMultimedia import QSound
 from PyQt5.QtGui import QColor, QFont, QIcon, QPixmap
-from PyQt5.QtWidgets import (QApplication, QCheckBox, QComboBox, QDateTimeEdit, QAbstractItemView,
+from PyQt5.QtWidgets import (QApplication, QCheckBox, QComboBox, QDateTimeEdit, QAbstractItemView, QMessageBox,
                              QDial, QDialog,QMainWindow, QGridLayout, QGroupBox, QHBoxLayout, QLabel, QLineEdit,
                              QProgressBar, QPushButton, QRadioButton, QScrollBar, QSizePolicy,QMessageBox, QListView,
                              QSlider, QSpinBox, QStyleFactory, QTableWidget, QTabWidget, QTextEdit, QFormLayout,QTreeView,
@@ -164,8 +165,10 @@ class CadastroPedidos(QDialog):
         
        
         self.tabv_pedidos.resizeColumnsToContents()
-        self.tabv_pedidos.doubleClicked.connect(self.abrirIItensDoPedido)
+        self.tabv_pedidos.doubleClicked.connect(self.abrirItensDoPedido)
         self.tabv_pedidos.setSelectionMode(QAbstractItemView.SingleSelection)
+        self.tabv_pedidos.setSelectionBehavior(QTableView.SelectRows)
+
 
         self.tabv_pedidos.setColumnWidth(2, 100)
         self.tabv_pedidos.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
@@ -225,22 +228,82 @@ class CadastroPedidos(QDialog):
         self.resumoLayout.addWidget(removeSelected)
         self.bottomLeftGroupBox.setLayout(self.resumoLayout)
 
-    def abrirIItensDoPedido(self, item):
+    def abrirItensDoPedido(self, item):
         print("[abrirIItensDoPedido] O Item foi selecionado através de um click na: {} x linha: {}".format(item.column(), item.row()))
         pedido = self.tabv_pedidos.model().index(item.row(), 0).data()
+        simafic = self.tabv_pedidos.model().index(item.row(), 1).data()
+        print(pedido, simafic)
         self.pedidos_selecionados = pedido
-        
-        
+
         try:
-            pedido_list_items = get_all_items_do_pedido(pedido)
-            print(pedido_list_items)
+            pedido_item = get_pedido_x_item(pedido, simafic)
+            print(pedido_item)
         except (ValidationError, DBPedidosException) as error:
             error_dialog = QErrorMessage()  
             error_dialog.setWindowTitle(error.errors)
             error_dialog.setWindowIcon(QIcon(main_icon))
             error_dialog.showMessage(error.message)
             error_dialog.exec_()
-        
+
+        box = QMessageBox()
+        box.setWindowIcon(QIcon(main_icon))
+        box.setWindowTitle("Pedido {} selecionado.".format(pedido_item.id_pedido))
+        box.setText("O que deseja fazer com o item {}?".format(pedido_item.cod_simafic))
+        box.setStandardButtons(QMessageBox.Open | QMessageBox.Discard | QMessageBox.Cancel)
+        buttonOpen = box.button(QMessageBox.Open)
+        buttonOpen.setText('Alterar')
+        buttonDiscard = box.button(QMessageBox.Discard)
+        buttonDiscard.setText('Excluir')
+        buttonCancel = box.button(QMessageBox.Cancel)
+        buttonCancel.setText('Cancelar')
+        box.exec_()
+        if box.clickedButton() == buttonOpen:
+            print ("Alterar")
+        elif box.clickedButton() == buttonDiscard:
+            print ("Excluir ")
+            self.confirmarExclusao(pedido_item)
+
+        elif box.clickedButton() == buttonCancel:
+            print ("Cancelar ")
+
+    def confirmarExclusao(self, pedido):
+        box = QMessageBox()
+        box.setWindowIcon(QIcon(main_icon))
+        box.setWindowTitle('Confirmação de Exclusão')
+        box.setText("Tem certeza que deseja excluir o item: {} do pedido {}?".format(pedido.cod_simafic, pedido.id_pedido))
+        box.setStandardButtons(QMessageBox.Yes | QMessageBox.No)
+        buttonYes = box.button(QMessageBox.Yes)
+        buttonYes.setText("Excluir")
+        buttonNo = box.button(QMessageBox.No)
+        buttonNo.setText("Cancelar")
+        box.exec_()
+
+        if box.clickedButton() == buttonYes:
+            self.excluirPedido(pedido)
+            print("Pedido excluido")
+            
+        else:
+            print("Exclusão cancelada")
+            return
+
+    def excluirPedido(self, pedido):
+        try:
+            excluirPedidoItem(pedido)
+            self.update_model_tableview()
+
+        except (ValidationError, DBPedidosException) as error:
+            error_dialog = QErrorMessage()  
+            error_dialog.setWindowTitle(error.errors)
+            error_dialog.setWindowIcon(QIcon(main_icon))
+            error_dialog.showMessage(error.message)
+            error_dialog.exec_()
+
+    '''def alterarPedido(self, pedido):
+        self.limpar_pedidos()
+        self.excluirPedido(pedido)
+        self.pedido.text = pedido.id_pedido
+        self.n_simafic.text = pedido.cod_simafic
+        self.qtd_items.text = pedido.qty_total'''
 
 
     def add_items(self):
@@ -488,25 +551,19 @@ class OperacaoLogistica(QDialog):
         print('def createPedidoIdList(self):')
         onlyids = set()
         pedidosbyid = []
-        result = []
+        pedidosCompletos = []
         self.proxy_list_result_id = QSortFilterProxyModel()
         for obj in self.pedidos:
             if obj.id_pedido not in onlyids:
                 pedidosbyid.append(obj)
                 onlyids.add(obj.id_pedido)
 
-        for idx, pedido in enumerate(onlyids):
-            i = QListWidgetItem('{}'.format(pedido))
-            i.setData(Qt.UserRole, pedido)
-            if( idx % 2 ==0):
-                i.setBackground( QColor('#c8ccd0') )
-            else:
-                i.setBackground( QColor('#ffffff') )
-            result.append(str(pedido))
-
-        self.pedidoId_model = QStringListModel(result, self)
+        self.pedidoId_model = QStringListModel(onlyids, self)
         self.proxy_list_result_id.setSourceModel(self.pedidoId_model)
         self.id_pedido_list.setModel(self.proxy_list_result_id)
+        self.id_pedido_list.setAlternatingRowColors(True)
+        self.id_pedido_list.setEditTriggers(QAbstractItemView.NoEditTriggers)
+
        
 
     def createListaSimafics(self, id_pedido):
@@ -526,7 +583,7 @@ class OperacaoLogistica(QDialog):
             print(item)
             self.itensTree.addItens(self.pedidosModel, item.cod_simafic, item.desc, item.qty_scanneada, item.qty_total, item.nome_responsavel, item.id_caixa, item.time_updated, item.id_pedido, item)
 
-        self.simafic_label.setText("Listagem de Itens por SIMAFIC:")
+        self.simafic_label.setText("Listagem de Itens do pedido {} por SIMAFIC:".format(pedido))
         self.simafic_label.setStyleSheet("QLabel { color: black; }")
 
         

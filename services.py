@@ -106,7 +106,7 @@ def add_pedido(pedido, n_simafic, qtd_items):
     print('Add Pedido')
     desc = df.loc[df['CODIGO'] == n_simafic, 'DESCRICAO']
     desc = desc.to_string()
-    pedidoModel = pdao.Pedido(pedido, n_simafic, desc, qtd_items, 0, None, None)
+    pedidoModel = pdao.Pedido(pedido, n_simafic, desc, qtd_items, 0, "A ser preenchido em Op. Logística.", "A ser preenchido em Op. Logística.")
     print('pedidoModel como Dict:' ,pedidoModel)
     try:
         pdao.inserirPedido(pedidoModel)
@@ -162,6 +162,20 @@ def get_all_items_do_pedido(pedido):
         raise DBPedidosException(str(e), 'Erro ao acessar o Banco de Dados:')
     return result
 
+def get_pedido_x_item(pedido, simafic):
+    try:
+        result = pdao.dinamicQueryItem(pedido, simafic)
+    except Exception as e: 
+        raise DBPedidosException(str(e), 'Erro ao acessar o Banco de Dados:')
+    return result
+
+def excluirPedidoItem(pedido):
+    try:
+        result = pdao.excluirPedidoItem(pedido)
+    except Exception as e: 
+        raise DBPedidosException(str(e), 'Erro ao acessar o Banco de Dados:')
+    return result
+
 def get_main_icon():
     return getConfig('inove', 'icon')
 
@@ -170,9 +184,6 @@ def get_h_size():
 
 def get_v_size():
     return getConfig('inove', 'v_size')
-
-def get_tree_simafic(input_dict):
-    return ViewTree(input_dict)
 
 if __name__ == "__main__":
     df = pd.read_excel('plan_test.xlsx', index_col=None, header=0)

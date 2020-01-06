@@ -6,7 +6,7 @@ from PyQt5.QtGui import QIcon
 
 from PyQt5.QtCore import (QDate, QDateTime, QRegExp, QSortFilterProxyModel, Qt,
 QTime)
-from PyQt5.QtGui import QStandardItemModel
+from PyQt5.QtGui import QStandardItemModel, QBrush, QColor
 from PyQt5.QtWidgets import (QApplication, QCheckBox, QComboBox, QGridLayout,
 QGroupBox, QHBoxLayout, QLabel, QLineEdit, QTreeView, QVBoxLayout,
 QWidget)
@@ -41,7 +41,11 @@ class PedidoItensTree(QWidget):
         model.setData(model.index(0, self.id_caixa), id_caixa)
         model.setData(model.index(0, self.time_updated), time_updated)
         model.setData(model.index(0, self.id_pedido), id_pedido)
-        
+
+        for column in range(model.columnCount()):
+            model.setData(model.index(0, column), Qt.AlignCenter, Qt.TextAlignmentRole)
+            if qty_scanneada is qty_total:
+                model.setData(model.index(0, column), QBrush(QColor(150, 200, 75)), Qt.BackgroundRole)
 
 
 if __name__ == '__main__':

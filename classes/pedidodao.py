@@ -43,8 +43,8 @@ class Pedido(Base):
     desc = Column(String(200), unique=False, nullable=False)
     qty_scanneada = Column(Integer, unique=False, nullable=False)
     qty_total = Column(Integer, unique=False, nullable=False)
-    nome_responsavel = Column(String(120), unique=False, nullable=False)
-    id_caixa = Column(String(80), unique=False, nullable=False)
+    nome_responsavel = Column(String(120), unique=False, nullable=False, default="Pedido ainda não possui responsável atribuído.")
+    id_caixa = Column(String(80), unique=False, nullable=False, default="Pedido ainda não possui caixa atribuída.")
     data_criacao = Column(DateTime, default=datetime.now)
     time_updated = Column(DateTime, onupdate=datetime.now)
     
@@ -156,6 +156,7 @@ else :
   
     def update_pedido(pedido):
         session = Session() 
+        pedido.time_update = datetime.now
         session.query(Pedido).filter_by(id_pedido=pedido.id_pedido).filter_by(cod_simafic=pedido.cod_simafic).update({column: getattr(pedido, column) for column in Pedido.__table__.columns.keys()})
         session.commit()
         #session.query(Pedido).filter(Pedido.id_pedido == pedido.id_pedido).one().id_pedido
@@ -167,3 +168,18 @@ else :
 
         session.close()
         return dados
+
+    def dinamicQueryItem(id_pedido, simafic):
+        session = Session()
+        print (str(id_pedido))
+        dados = session.query(Pedido).filter_by(id_pedido = id_pedido).filter_by(cod_simafic=simafic).one()
+
+        session.close()
+        return dados
+
+    def excluirPedidoItem(pedido):
+        #Remover um registro da tabela.
+        session = Session()
+        session.query(Pedido).filter(Pedido.id == pedido.id).delete()
+        session.commit()
+        print("Pedido {} Removido com Sucesso.".format(pedido))
