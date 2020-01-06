@@ -221,11 +221,7 @@ class CadastroPedidos(QDialog):
         verticalSpacer = QSpacerItem(40, 20, QSizePolicy.Minimum, QSizePolicy.Expanding)
 
         self.resumoLayout = QGridLayout()
-        
-        removeSelected = QPushButton('Remover Itens Selecionados')
-        removeSelected.clicked.connect(self.removerItens)
         self.resumoLayout.addItem(verticalSpacer)
-        self.resumoLayout.addWidget(removeSelected)
         self.bottomLeftGroupBox.setLayout(self.resumoLayout)
 
     def abrirItensDoPedido(self, item):
@@ -258,7 +254,9 @@ class CadastroPedidos(QDialog):
         buttonCancel.setText('Cancelar')
         box.exec_()
         if box.clickedButton() == buttonOpen:
-            print ("Alterar")
+            print ("Alterar...")
+            self.cams = UpdateScreen(pedido_item)
+            self.cams.show()
         elif box.clickedButton() == buttonDiscard:
             print ("Excluir ")
             self.confirmarExclusao(pedido_item)
@@ -298,12 +296,7 @@ class CadastroPedidos(QDialog):
             error_dialog.showMessage(error.message)
             error_dialog.exec_()
 
-    '''def alterarPedido(self, pedido):
-        self.limpar_pedidos()
-        self.excluirPedido(pedido)
-        self.pedido.text = pedido.id_pedido
-        self.n_simafic.text = pedido.cod_simafic
-        self.qtd_items.text = pedido.qty_total'''
+    
 
 
     def add_items(self):
@@ -339,15 +332,7 @@ class CadastroPedidos(QDialog):
     def limpar_pedidos(self):
         self.n_simafic.clear()
         self.qtd_items.clear()
-        #self.pedido.clear()
-
-    def removerItens(self):
-        '''listItems=self.listaViewItens.selectedItems()
-        if not listItems: return        
-        for item in listItems:
-            print (type(item), dir(item))'''
-
-        
+        self.pedido.clear()
 
     def goMainWindow(self):
         self.cams = MainWindow()
@@ -467,7 +452,105 @@ class MainWindow(QMainWindow):
         self.cams = OperacaoLogistica() 
         self.cams.show()
         self.close()
+
+class UpdateScreen(QDialog):
+    def __init__(self, pedido,parent=None):
+        super(UpdateScreen, self).__init__(parent, Qt.WindowStaysOnTopHint)
+        self.setWindowFlags(Qt.WindowMinMaxButtonsHint | Qt.WindowCloseButtonHint)
+        self.setWindowTitle('Alterar Item')
+        self.setMinimumSize(QSize((h_size/2), (v_size/2)))
+        self.setWindowIcon(QIcon(main_icon))
+        self.setWindowFlag(Qt.WindowStaysOnTopHint)
+
+        self.topLeftGroupBox = QGroupBox("Alterar Pedido")
+
+        verticalSpacer = QSpacerItem(40, 20, QSizePolicy.Minimum, QSizePolicy.Expanding)
+
+        self.item = pedido
+
+        formLayout = QFormLayout()
+
+        id_ped = QLineEdit(self)
+        id_ped.setText(str(self.item.id))
+        id_ped.setDisabled(True)
+        id_ped_label = QLabel("Id no Sistema:")
+
+        self.pedido = QLineEdit(self)
+        self.pedido.setText(self.item.id_pedido)
+        pedido_label = QLabel("Pedido:")
+
+        self.n_simafic = QLineEdit(self)
+        self.n_simafic.setText(self.item.cod_simafic)
+        n_simafic_label = QLabel("COD. SIMAFIC:")
+
+        self.qtd_scan = QLineEdit(self)
+        self.qtd_scan.setText(str(self.item.qty_scanneada))
+        qtd_items_scan_label = QLabel("Quantidade de Scanneados:")
+        self.qtd_scan.setDisabled(True)
+
+
+        self.qtd_items = QLineEdit(self)
+        self.qtd_items.setText(str(self.item.qty_total))
+        qtd_items_label = QLabel("Quantidade de Items:")
+
+        self.id_caixa = QLineEdit(self)
+        self.id_caixa.setText(str(self.item.id_caixa))
+        id_caixa_label = QLabel("Id da Caixa:")
+
+        self.nome_resp = QLineEdit(self)
+        self.nome_resp.setText(str(self.item.nome_responsavel))
+        nome_resp_label = QLabel("Nome do responsável:")
+
+        '''ADD PEDIDO'''
+        add_item = QPushButton('Confirmar Alteração')
+        add_item.setObjectName('Add')
+        add_item.setIcon(QIcon('assets/check_icon_blue2.png'))
+        add_item.clicked.connect(self.updateItens)
+
+        '''CLEAR BUTTON CONFIG '''
+        clear_btn = QPushButton('Limpar Campos')
+        clear_btn.setObjectName('Yellow')
+        clear_btn.setIcon(QIcon('assets/eraser.png'))
+        clear_btn.clicked.connect(self.cancelar)
+
+        formLayout.addRow(id_ped_label, id_ped)                
+        formLayout.addRow(pedido_label, self.pedido)
+        formLayout.addRow(n_simafic_label, self.n_simafic)
+        formLayout.addRow(qtd_items_scan_label, self.qtd_scan)
+        formLayout.addRow(qtd_items_label, self.qtd_items)
+        formLayout.addRow(id_caixa_label, self.id_caixa)
+        formLayout.addRow(nome_resp_label, self.nome_resp)
+        formLayout.addItem(verticalSpacer)
+        formLayout.addRow(add_item)
+        formLayout.addRow(clear_btn)
+ 
+        '''checkBox = QCheckBox("Tri-state check box")
+        checkBox.setTristate(True)
+        checkBox.setCheckState(Qt.PartiallyChecked)'''
+
+        #layout.addWidget(checkBox)
+        '''formLayout.addWidget(add_item)
+        formLayout.addWidget(clear_btn)'''
         
+
+
+        layout = QVBoxLayout()
+        layout.addLayout(formLayout)
+        layout.addStretch(1)
+         
+        self.setLayout(layout)
+
+    def updateItens(self):
+        updateItem(pedido)
+        self.close()
+        pass
+    def cancelar(self):
+        self.close()
+        pass
+
+    def updateItem(self, pedido):
+        pedido, n_simafic, qtd_items, id_caixa, nome_resp = self.pedido.text(), self.n_simafic.text(), self.qtd_items.text(), self.id_caixa.text(), self.nome_resp()
+
 
 class OperacaoLogistica(QDialog):
     #TODO: Acertar formatação na listagem de items por SIMAFIC 

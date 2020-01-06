@@ -106,8 +106,8 @@ def add_pedido(pedido, n_simafic, qtd_items):
     print('Add Pedido')
     desc = df.loc[df['CODIGO'] == n_simafic, 'DESCRICAO']
     desc = desc.to_string()
-    pedidoModel = pdao.Pedido(pedido, n_simafic, desc, qtd_items, 0, "A ser preenchido em Op. Logística.", "A ser preenchido em Op. Logística.")
-    print('pedidoModel como Dict:' ,pedidoModel)
+    pedidoModel = pdao.Pedido(pedido, n_simafic, desc, qtd_items, 0, "A ser definido.", "A ser definido.")
+    #print('pedidoModel como Dict:' ,pedidoModel)
     try:
         pdao.inserirPedido(pedidoModel)
     except Exception as e:
@@ -134,9 +134,9 @@ def get_all_pedidos_pandas():
         arr = pdao.queryAllPedidos()
     except Exception as e:
         raise DBPedidosException(str(e),'Erro ao acessar o Banco de Dados:')
-    print(arr)
+    #print(arr)
     df = pd.DataFrame.from_records(s.asdict() for s in arr)
-    print(df)
+    #print(df)
     return PandasModel(df)
 
 def get_all_pedidos():

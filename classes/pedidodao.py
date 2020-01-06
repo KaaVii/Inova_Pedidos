@@ -46,7 +46,7 @@ class Pedido(Base):
     nome_responsavel = Column(String(120), unique=False, nullable=False, default="Pedido ainda não possui responsável atribuído.")
     id_caixa = Column(String(80), unique=False, nullable=False, default="Pedido ainda não possui caixa atribuída.")
     data_criacao = Column(DateTime, default=datetime.now)
-    time_updated = Column(DateTime, onupdate=datetime.now)
+    time_updated = Column(DateTime, default=datetime.now, onupdate=datetime.now)
     
     def __init__(self, id_pedido, cod_simafic, desc, qty_total, qty_scanneada, nome_responsavel, id_caixa):
        
@@ -150,7 +150,6 @@ else :
         
         session = Session()
         dados = session.query(Pedido).all()
-        print(dados)
         session.close()
         return dados
   
