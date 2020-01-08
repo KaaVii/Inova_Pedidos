@@ -7,6 +7,7 @@ from assets.style import getStyle
 from classes.pedidoTreeModel import PedidoItensTree
 from PyQt5.QtCore import QDateTime, Qt, QTimer, QSize, QSortFilterProxyModel, pyqtSlot, QModelIndex, QStringListModel
 from PyQt5 import QtGui
+from datetime import datetime
 import pprint
 from PyQt5.QtMultimedia import QSound
 from PyQt5.QtGui import QColor, QFont, QIcon, QPixmap
@@ -14,7 +15,7 @@ from PyQt5.QtWidgets import (QApplication, QCheckBox, QComboBox, QDateTimeEdit, 
                              QDial, QDialog,QMainWindow, QGridLayout, QGroupBox, QHBoxLayout, QLabel, QLineEdit,
                              QProgressBar, QPushButton, QRadioButton, QScrollBar, QSizePolicy,QMessageBox, QListView,
                              QSlider, QSpinBox, QStyleFactory, QTableWidget, QTabWidget, QTextEdit, QFormLayout,QTreeView,
-                             QVBoxLayout, QWidget, QErrorMessage, QTableView, QSpacerItem, QListWidget, QListWidgetItem, QStyle)
+                             QVBoxLayout, QWidget, QErrorMessage, QTableView, QSpacerItem, QListWidget, QListWidgetItem, QStyle, QHeaderView)
 
 
 main_icon = str(get_main_icon())
@@ -201,6 +202,8 @@ class CadastroPedidos(QDialog):
         layoutText.addWidget(searchProduto)
         
         layout.addLayout(layoutText)
+        
+        self.tabv_pedidos.verticalHeader()
         self.tabv_pedidos.resizeColumnsToContents()
         layout.addWidget(self.tabv_pedidos)
         tab1ListaPedidos.setLayout(layout)
@@ -255,7 +258,7 @@ class CadastroPedidos(QDialog):
         box.exec_()
         if box.clickedButton() == buttonOpen:
             print ("Alterar...")
-            self.cams = UpdateScreen(pedido_item)
+            self.cams = UpdateScreen(pedido_item, parent=self)
             self.cams.show()
         elif box.clickedButton() == buttonDiscard:
             print ("Excluir ")
@@ -263,6 +266,7 @@ class CadastroPedidos(QDialog):
 
         elif box.clickedButton() == buttonCancel:
             print ("Cancelar ")
+            
 
     def confirmarExclusao(self, pedido):
         box = QMessageBox()
@@ -343,11 +347,11 @@ class CadastroPedidos(QDialog):
 class MainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
-        self.title = "Inove App"
+        self.title = "Inova App"
         self.setMinimumSize(QSize(h_size, v_size))
         self.originalPalette = QApplication.palette()
         self.setWindowIcon(QtGui.QIcon(main_icon))
-        self.setWindowTitle("Inove")
+        self.setWindowTitle("Inova")
         self.setStyleSheet(style)
         self.InitUI()
         errorSound = QSound('assets/error.wav')
@@ -456,7 +460,7 @@ class MainWindow(QMainWindow):
 class UpdateScreen(QDialog):
     def __init__(self, pedido,parent=None):
         super(UpdateScreen, self).__init__(parent, Qt.WindowStaysOnTopHint)
-        self.setWindowFlags(Qt.WindowMinMaxButtonsHint | Qt.WindowCloseButtonHint)
+        self.setWindowFlags(self.windowFlags() | Qt.Window | Qt.WindowMinMaxButtonsHint | Qt.WindowCloseButtonHint)
         self.setWindowTitle('Alterar Item')
         self.setMinimumSize(QSize((h_size/2), (v_size/2)))
         self.setWindowIcon(QIcon(main_icon))
@@ -467,7 +471,7 @@ class UpdateScreen(QDialog):
         verticalSpacer = QSpacerItem(40, 20, QSizePolicy.Minimum, QSizePolicy.Expanding)
 
         self.item = pedido
-
+        
         formLayout = QFormLayout()
 
         id_ped = QLineEdit(self)
@@ -478,10 +482,20 @@ class UpdateScreen(QDialog):
         self.pedido = QLineEdit(self)
         self.pedido.setText(self.item.id_pedido)
         pedido_label = QLabel("Pedido:")
+        self.pedido.textChanged.connect(lambda x: self.item.set_id_pedido(x))
+        self.pedido.setDisabled(True)
 
         self.n_simafic = QLineEdit(self)
         self.n_simafic.setText(self.item.cod_simafic)
         n_simafic_label = QLabel("COD. SIMAFIC:")
+        self.n_simafic.textChanged.connect(lambda x: self.item.set_cod_simafic(x))
+        self.n_simafic.setDisabled(True)
+
+        self.desc = QLineEdit(self)
+        self.desc.setText(self.item.desc)
+        desc_label = QLabel("DESC:")
+        self.desc.textChanged.connect(lambda x: self.item.set_desc(x))
+
 
         self.qtd_scan = QLineEdit(self)
         self.qtd_scan.setText(str(self.item.qty_scanneada))
@@ -492,30 +506,37 @@ class UpdateScreen(QDialog):
         self.qtd_items = QLineEdit(self)
         self.qtd_items.setText(str(self.item.qty_total))
         qtd_items_label = QLabel("Quantidade de Items:")
+        self.qtd_items.textChanged.connect(lambda x: self.item.set_qty_total(x))
+
 
         self.id_caixa = QLineEdit(self)
         self.id_caixa.setText(str(self.item.id_caixa))
         id_caixa_label = QLabel("Id da Caixa:")
+        self.id_caixa.textChanged.connect(lambda x: self.item.set_id_caixa(x))
+
 
         self.nome_resp = QLineEdit(self)
         self.nome_resp.setText(str(self.item.nome_responsavel))
         nome_resp_label = QLabel("Nome do responsável:")
+        self.nome_resp.textChanged.connect(lambda x: self.item.set_nome_responsavel(x))
+
 
         '''ADD PEDIDO'''
         add_item = QPushButton('Confirmar Alteração')
         add_item.setObjectName('Add')
         add_item.setIcon(QIcon('assets/check_icon_blue2.png'))
-        add_item.clicked.connect(self.updateItens)
+        add_item.clicked.connect(lambda : self.updateItens())
 
         '''CLEAR BUTTON CONFIG '''
-        clear_btn = QPushButton('Limpar Campos')
+        clear_btn = QPushButton('Cancelar Alteração')
         clear_btn.setObjectName('Yellow')
         clear_btn.setIcon(QIcon('assets/eraser.png'))
-        clear_btn.clicked.connect(self.cancelar)
+        clear_btn.clicked.connect(lambda : self.cancelar())
 
         formLayout.addRow(id_ped_label, id_ped)                
         formLayout.addRow(pedido_label, self.pedido)
         formLayout.addRow(n_simafic_label, self.n_simafic)
+        formLayout.addRow(desc_label, self.desc)
         formLayout.addRow(qtd_items_scan_label, self.qtd_scan)
         formLayout.addRow(qtd_items_label, self.qtd_items)
         formLayout.addRow(id_caixa_label, self.id_caixa)
@@ -541,16 +562,16 @@ class UpdateScreen(QDialog):
         self.setLayout(layout)
 
     def updateItens(self):
-        updateItem(pedido)
+        update_pedido(self.item)
+        self.parent().update_model_tableview()
+        self.parent().limpar_pedidos()
         self.close()
         pass
     def cancelar(self):
         self.close()
         pass
 
-    def updateItem(self, pedido):
-        pedido, n_simafic, qtd_items, id_caixa, nome_resp = self.pedido.text(), self.n_simafic.text(), self.qtd_items.text(), self.id_caixa.text(), self.nome_resp()
-
+    
 
 class OperacaoLogistica(QDialog):
     #TODO: Acertar formatação na listagem de items por SIMAFIC 
@@ -664,7 +685,7 @@ class OperacaoLogistica(QDialog):
     
         for idx, item in enumerate(self.item_result):
             print(item)
-            self.itensTree.addItens(self.pedidosModel, item.cod_simafic, item.desc, item.qty_scanneada, item.qty_total, item.nome_responsavel, item.id_caixa, item.time_updated, item.id_pedido, item)
+            self.itensTree.addItens(self.pedidosModel, item.cod_simafic, item.desc, item.qty_scanneada, item.qty_total, item.nome_responsavel, item.id_caixa, item.time_updated.strftime("%d/%m/%y %H:%M:%S"), item.id_pedido, item)
 
         self.simafic_label.setText("Listagem de Itens do pedido {} por SIMAFIC:".format(pedido))
         self.simafic_label.setStyleSheet("QLabel { color: black; }")
@@ -680,7 +701,7 @@ class OperacaoLogistica(QDialog):
         self.item_escolhido = [x for x in self.item_result if x.cod_simafic == simafic_escolhido and x.id_pedido == id_pedido]
         self.cams = ItemScanner(self.item_escolhido[0])
         self.cams.show()
-        #self.close()
+        self.close()
 
     def goMainWindow(self):
         self.cams = MainWindow()

@@ -69,8 +69,27 @@ class Pedido(Base):
         return ({'Pedido': self.id_pedido, 'COD. SIMAFIC': self.cod_simafic, 
         'Descrição': self.desc, 'Qtd. Total': self.qty_total, 
         'Qtd. Scanneada': self.qty_scanneada, 'Nº da Caixa':self.id_caixa, 
-        'Responsável': self.nome_responsavel,'Data Criação': self.data_criacao,
-        'Data Atualização':self.time_updated})
+        'Responsável': self.nome_responsavel,'Data Criação': self.data_criacao.strftime("%d/%m/%y %H:%M:%S"),
+        'Data Atualização':self.time_updated.strftime("%d/%m/%y %H:%M:%S")})
+
+    def set_id_pedido(self, a): 
+        print("set_id_pedido method called") 
+        self.id_pedido = str(a) 
+    def set_cod_simafic(self, a): 
+        print("set_cod_simafic method called") 
+        self.cod_simafic = str(a) 
+    def set_desc(self, a): 
+        print("set_desc method called") 
+        self.desc = str(a) 
+    def set_qty_total(self, a): 
+        print("set_qty_total method called") 
+        self.qty_total = int(a) 
+    def set_nome_responsavel(self, a): 
+        print("set_nome_responsavel method called") 
+        self.nome_responsavel = str(a)
+    def set_id_caixa(self, a): 
+         print("set_id_caixa method called") 
+         self.id_caixa = str(a)
 
 if __name__ == "__main__":
     # Removendo todas as tabelas do banco.

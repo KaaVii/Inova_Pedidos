@@ -26,7 +26,7 @@ class DataFrameModel(QtCore.QAbstractTableModel):
             if orientation == QtCore.Qt.Horizontal:
                 return self._dataframe.columns[section]
             else:
-                return str(self._dataframe.index[section])
+                return str(self._dataframe.index[section] + 1 )
         return QtCore.QVariant()
 
     def rowCount(self, parent=QtCore.QModelIndex()):

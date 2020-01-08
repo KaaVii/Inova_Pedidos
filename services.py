@@ -176,6 +176,8 @@ def excluirPedidoItem(pedido):
         raise DBPedidosException(str(e), 'Erro ao acessar o Banco de Dados:')
     return result
 
+
+
 def get_main_icon():
     return getConfig('inove', 'icon')
 
