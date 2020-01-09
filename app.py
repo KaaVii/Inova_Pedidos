@@ -202,6 +202,7 @@ class CadastroPedidos(QDialog):
         layoutText.addWidget(searchProduto)
         
         layout.addLayout(layoutText)
+        layout.addWidget(QLabel("Para abrir mais opções sobre um pedido, clique duas vezes no item."))
         
         self.tabv_pedidos.verticalHeader()
         self.tabv_pedidos.resizeColumnsToContents()
@@ -779,9 +780,16 @@ class ItemScanner(QDialog):
 
         self.count_resp_le = QLineEdit(self)
         self.count_resp_le.setPlaceholderText("ex. John Doe")
+        if (self.pedido.nome_responsavel not in "A ser definido."):
+            self.count_resp_le.setText(self.pedido.nome_responsavel)
+            self.count_resp_le.setDisabled(True)
+
 
         self.id_caixa_le = QLineEdit(self)
         self.id_caixa_le.setPlaceholderText("ex. 12AB")
+        if (self.pedido.id_caixa not in "A ser definido."):
+            self.id_caixa_le.setReadOnly(True)
+            self.id_caixa_le.setText(self.pedido.id_caixa)
 
         desc_le = QLineEdit(self.pedido.desc)
         desc_le.setText = self.pedido.desc
@@ -911,6 +919,14 @@ class ItemScanner(QDialog):
                 self.pedido.id_caixa = self.id_caixa_le.text()
                 update_pedido(self.pedido)
                 self.input_scanner.clear()
+                if (self.pedido.qty_scanneada == self.pedido.qty_total):
+                    print ("Aqui é pra tocar o som")
+                    QSound.play('assets/error.wav')
+                    self.input_scanner.setDisabled(True)
+                    QMessageBox.warning(
+                        self, "Item finalizado.",
+                        "O Item já atingiu a quantidade cadastrada."
+                    )
         except (ValidationError, DBPedidosException) as error:
             error_dialog = QErrorMessage()
             errorSound = QSound('assets/error.wav')

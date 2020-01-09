@@ -53,12 +53,13 @@ def valida_simafic(s_input, pedido):
         raise ValidationError("Código SIMAFIC [{}] está fora do formato padrão!".format(s_input), error)
     if (pedido.qty_scanneada >= pedido.qty_total):
         success=False
-        raise ValidationError("O Pedido já atingiu a quantidade cadastrada.", error)
+        raise ValidationError("O Item já atingiu a quantidade cadastrada.", error)
     if (s_input != pedido.cod_simafic):
         success=False
         raise ValidationError("A leitura do código da embalagem [{}] não corresponde ao código [{}]. Verifique a etiqueta.".format(s_input, pedido.cod_simafic), error)
     if (s_input is pedido.cod_simafic):        
         success = True
+        
     return success
 
 def validaQtdPedido(pedido):
