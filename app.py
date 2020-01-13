@@ -1,8 +1,6 @@
 import fix_qt_import_error
 from exceptions import ValidationError, DBPedidosException
-from services import (get_simafic_as_dataframe, get_main_icon, get_h_size, get_v_size, get_all_pedidos_pandas, add_pedido,validateCadastro,
-validateInfoScan,ValidationError, get_all_pedidos, get_all_pedidos_df, valida_simafic, update_pedido, validaQtdPedido, get_all_items_do_pedido, update_cancelar_scan, 
-get_pedido_x_item, validaSimaficXLS, excluirPedidoItem)
+import services
 from assets.style import getStyle
 from classes.pedidoTreeModel import PedidoItensTree
 from PyQt5.QtCore import QDateTime, Qt, QTimer, QSize, QSortFilterProxyModel, pyqtSlot, QModelIndex, QStringListModel
@@ -16,15 +14,10 @@ from PyQt5.QtWidgets import (QApplication, QCheckBox, QComboBox, QDateTimeEdit, 
                              QProgressBar, QPushButton, QRadioButton, QScrollBar, QSizePolicy,QMessageBox, QListView,
                              QSlider, QSpinBox, QStyleFactory, QTableWidget, QTabWidget, QTextEdit, QFormLayout,QTreeView,
                              QVBoxLayout, QWidget, QErrorMessage, QTableView, QSpacerItem, QListWidget, QListWidgetItem, QStyle, QHeaderView)
+import time
 
 
-main_icon = str(get_main_icon())
-h_size=int(get_h_size())
-v_size=int(get_v_size())
 
-style = getStyle()
-
-pp = pprint.PrettyPrinter(indent=4)
 class CadastroPedidos(QDialog):
 
     def __init__(self, parent=None):
@@ -75,7 +68,7 @@ class CadastroPedidos(QDialog):
         mainLayout.setColumnStretch(1, 3)
 
         self.setLayout(mainLayout)
-   
+
     def dadosDoPedido(self):
         self.topLeftGroupBox = QGroupBox("Dados do Pedido")
 
@@ -151,7 +144,7 @@ class CadastroPedidos(QDialog):
         #[First Tab] - Set TableView
         self.tabv_pedidos = QTableView()
         tab2hbox = QHBoxLayout()
-        self.modelAllPedidos = get_all_pedidos_pandas()
+        self.modelAllPedidos = services.get_all_pedidos_pandas()
 
         #[First Tab] - Set Filters
         self.proxyPedidoFilter = QSortFilterProxyModel()
@@ -187,8 +180,11 @@ class CadastroPedidos(QDialog):
         tableItensValidos = QTableView()
         #tableItensValidos.horizontalHeader().sectionClicked.connect(your_callable)
 
-        model = get_simafic_as_dataframe()
+        model = services.get_simafic_as_dataframe()
+        
+        
         tableItensValidos.setModel(model)
+        
         
         tab1hbox = QHBoxLayout()
         #tab1hbox.setContentsMargins(5, 5, 5, 5)
@@ -236,7 +232,7 @@ class CadastroPedidos(QDialog):
         self.pedidos_selecionados = pedido
 
         try:
-            pedido_item = get_pedido_x_item(pedido, simafic)
+            pedido_item = services.get_pedido_x_item(pedido, simafic)
             print(pedido_item)
         except (ValidationError, DBPedidosException) as error:
             error_dialog = QErrorMessage()  
@@ -291,7 +287,7 @@ class CadastroPedidos(QDialog):
 
     def excluirPedido(self, pedido):
         try:
-            excluirPedidoItem(pedido)
+            services.excluirPedidoItem(pedido)
             self.update_model_tableview()
 
         except (ValidationError, DBPedidosException) as error:
@@ -308,13 +304,13 @@ class CadastroPedidos(QDialog):
         try:
             pedido, n_simafic, qtd_items = self.pedido.text(), self.n_simafic.text(), self.qtd_items.text()
             print ("Add Pedido: {} {} {}".format(pedido, n_simafic, qtd_items))
-            if validateCadastro(pedido, n_simafic, qtd_items):
+            if services.validateCadastro(pedido, n_simafic, qtd_items):
                 print ("Add Pedido: {} {} {}".format(pedido, n_simafic, qtd_items))
                 mb = QMessageBox()
                 mb.setIconPixmap(QPixmap('assets/check_icon_blue2'))
                 mb.setWindowTitle("Sucesso")
                 mb.setText('O pedido: {} foi criado com sucesso!'.format(pedido))
-                add_pedido(pedido, n_simafic, qtd_items)
+                services.add_pedido(pedido, n_simafic, qtd_items)
                 mb.exec_()
                 self.update_model_tableview()
                 self.limpar_pedidos()
@@ -328,10 +324,9 @@ class CadastroPedidos(QDialog):
             error_dialog.exec_()
         
         pass
-        #add_pedido(pedido)
     
     def update_model_tableview(self):
-        self.modelAllPedidos.setDataFrame(get_all_pedidos_df())
+        self.modelAllPedidos.setDataFrame(services.get_all_pedidos_df())
         self.topRightGroupBox.setCurrentIndex(0)
 
     def limpar_pedidos(self):
@@ -340,7 +335,7 @@ class CadastroPedidos(QDialog):
         self.pedido.clear()
 
     def goMainWindow(self):
-        self.cams = MainWindow()
+        self.cams = mainView
         self.cams.show()
         self.close()
 
@@ -348,11 +343,12 @@ class CadastroPedidos(QDialog):
 class MainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
-        self.title = "Inova App"
+        self.cadastroPedidos = CadastroPedidos()
+        self.title = "Inove Confecções App"
         self.setMinimumSize(QSize(h_size, v_size))
         self.originalPalette = QApplication.palette()
         self.setWindowIcon(QtGui.QIcon(main_icon))
-        self.setWindowTitle("Inova")
+        self.setWindowTitle("Inove")
         self.setStyleSheet(style)
         self.InitUI()
         errorSound = QSound('assets/error.wav')
@@ -447,9 +443,8 @@ class MainWindow(QMainWindow):
     @pyqtSlot()
     def cadastrarPedido(self):
         self.statusBar().showMessage("Switched to CadastroPedidos")
-        self.cams = CadastroPedidos() 
-        self.cams.show()
-        self.close()
+        self.cadastroPedidos.show()
+        self.hide()
 
     @pyqtSlot()
     def operacaoLogistica(self):
@@ -563,7 +558,7 @@ class UpdateScreen(QDialog):
         self.setLayout(layout)
 
     def updateItens(self):
-        update_pedido(self.item)
+        services.update_pedido(self.item)
         self.parent().update_model_tableview()
         self.parent().limpar_pedidos()
         self.close()
@@ -601,7 +596,7 @@ class OperacaoLogistica(QDialog):
 
         #Adicionar Cores no StyleSheet
         colors = ['##393318', '  ##fff']
-        self.pedidos = get_all_pedidos()
+        self.pedidos = services.get_all_pedidos()
         self.item_result = None
         self.item_escolhido = None
 
@@ -705,7 +700,7 @@ class OperacaoLogistica(QDialog):
         self.close()
 
     def goMainWindow(self):
-        self.cams = MainWindow()
+        self.cams = mainView
         self.cams.show()
         self.close()
 
@@ -767,7 +762,7 @@ class ItemScanner(QDialog):
         self.setLayout(vLayout)
 
     def validaQuantidade(self):
-        if validaQtdPedido(self.pedido):
+        if services.validaQtdPedido(self.pedido):
             pass;
         else:
             self.pedidoInfoBox.setDisabled(True)
@@ -885,7 +880,7 @@ class ItemScanner(QDialog):
     def validaPedidoInfo(self):
         try:
             print ("validateInfoScan")
-            validateInfoScan(self.count_resp_le.text(), self.id_caixa_le.text(), self.pedido)
+            services.validateInfoScan(self.count_resp_le.text(), self.id_caixa_le.text(), self.pedido)
             self.startCount.setDisabled(True)
             self.count_resp_le.setDisabled(True)
             self.id_caixa_le.setDisabled(True)
@@ -904,7 +899,7 @@ class ItemScanner(QDialog):
         buttonReply = QMessageBox.question(self, 'Cancelamento de Contagem', "Deseja cancelar a contagem? Os itens contados serão desconsiderados.", QMessageBox.Yes | QMessageBox.No, QMessageBox.No)
         if buttonReply == QMessageBox.Yes:
             print('Cancelamento de pedido aprovado por {}.'.format(self.count_resp_le.text()))
-            update_cancelar_scan(self.pedido)
+            services.update_cancelar_scan(self.pedido)
             self.goOperacoesLogisticas()
         else:
            pass;
@@ -912,12 +907,12 @@ class ItemScanner(QDialog):
     def validaScanInput(self):
         print('validaScanInput {}'.format(self.input_scanner.text()))
         try:
-            if valida_simafic(s_input=self.input_scanner.text(), pedido=self.pedido):
+            if services.valida_simafic(s_input=self.input_scanner.text(), pedido=self.pedido):
                 self.pedido.qty_scanneada += 1
                 self.qtd_parcial_le.setText(str(self.pedido.qty_scanneada))
                 self.pedido.nome_responsavel = self.count_resp_le.text()
                 self.pedido.id_caixa = self.id_caixa_le.text()
-                update_pedido(self.pedido)
+                services.update_pedido(self.pedido)
                 self.input_scanner.clear()
                 if (self.pedido.qty_scanneada == self.pedido.qty_total):
                     print ("Aqui é pra tocar o som")
@@ -946,16 +941,19 @@ class ItemScanner(QDialog):
         self.close()
 
     def goMainWindow(self):
-        self.cams = MainWindow()
+        self.cams = mainView
         self.cams.show()
         self.close() 
 
 if __name__ == '__main__':
 
     import sys
-
+    main_icon = str(services.get_main_icon())
+    h_size=int(services.get_h_size())
+    v_size=int(services.get_v_size())
+    style = getStyle()
+    pp = pprint.PrettyPrinter(indent=4)
     app = QApplication(sys.argv)
-
     mainView = MainWindow()
     #mainView.clearFocus()
     mainView.show()

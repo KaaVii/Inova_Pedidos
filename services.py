@@ -189,12 +189,12 @@ def get_v_size():
     return getConfig('inove', 'v_size')
 
 if __name__ == "__main__":
-    df = pd.read_excel('plan_test.xlsx', index_col=None, header=0)
+    df = pd.read_excel('simafic.xlsx', index_col=None, header=0)
     valoresPermitidos = json.loads(getConfig('filtros', 'tamanhos'))
     validaSimaficXLS("08.05.31.404-4")
 
 else:
-    df = pd.read_excel('plan_test.xlsx', index_col=None, header=0)
+    df = pd.read_excel('simafic.xlsx', index_col=None, header=0)
     valoresPermitidos = json.loads(getConfig('filtros', 'tamanhos'))
 
     #comparator()
